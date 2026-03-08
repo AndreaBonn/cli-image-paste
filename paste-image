@@ -1,0 +1,167 @@
+#!/usr/bin/env bash
+#
+# paste-image — Incolla immagini dalla clipboard X11 nel terminale attivo
+#
+# Utilizzo: viene invocato tramite shortcut globale GNOME.
+# Legge un'immagine dagli appunti X11, la salva come file temporaneo
+# e digita il path nel terminale attivo.
+#
+
+set -euo pipefail
+
+VERSION="1.0.0"
+
+# --- Gestione argomenti ---
+
+if [[ "${1:-}" == "--version" || "${1:-}" == "-v" ]]; then
+    echo "paste-image $VERSION"
+    exit 0
+fi
+
+# --- Configurazione ---
+# Tutte le costanti configurabili sono raccolte qui.
+# Per modificare il comportamento dello script, editare solo questa sezione.
+
+MAX_LOG_LINES=500          # Soglia di rotazione del file di log (in righe)
+NOTIFY_TIMEOUT=3000        # Durata notifiche desktop in millisecondi
+CLEANUP_DAYS=7             # Giorni dopo cui i file temporanei vengono eliminati
+TYPING_DELAY=0.1           # Pausa in secondi prima di xdotool type (stabilità focus)
+
+# --- Logging e notifiche ---
+
+LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/paste-image"
+mkdir -p "$LOG_DIR"
+LOG_FILE="$LOG_DIR/paste_image.log"
+
+log() {
+    # Scrittura + rotazione atomiche tramite flock (elimina race condition TOCTOU)
+    (
+        flock -w 2 9 || exit 0
+
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOG_FILE"
+
+        # Ruota il log se supera MAX_LOG_LINES
+        if [ -f "$LOG_FILE" ] && [ "$(wc -l < "$LOG_FILE")" -gt "$MAX_LOG_LINES" ]; then
+            tail -n "$((MAX_LOG_LINES / 2))" "$LOG_FILE" > "${LOG_FILE}.tmp" && \
+                mv "${LOG_FILE}.tmp" "$LOG_FILE"
+        fi
+    ) 9>"${LOG_FILE}.lock" || true
+}
+
+# Rileva metodo di notifica disponibile
+NOTIFY_METHOD="none"
+if command -v notify-send &>/dev/null; then
+    NOTIFY_METHOD="notify-send"
+elif command -v zenity &>/dev/null; then
+    NOTIFY_METHOD="zenity"
+fi
+
+notify() {
+    local msg="$1"
+    log "$msg"
+
+    case "$NOTIFY_METHOD" in
+        notify-send)
+            notify-send -t "$NOTIFY_TIMEOUT" "paste-image" "$msg"
+            ;;
+        zenity)
+            zenity --notification --text="paste-image: $msg" 2>/dev/null &
+            ;;
+    esac
+}
+
+# --- Verifica dipendenze ---
+
+check_dependency() {
+    if ! command -v "$1" &>/dev/null; then
+        notify "Errore: '$1' non è installato. Installa con: sudo apt install $2"
+        echo "Errore: '$1' non è installato." >&2
+        echo "Installa con: sudo apt install $2" >&2
+        exit 1
+    fi
+}
+
+check_dependency xclip xclip
+check_dependency xdotool xdotool
+
+# --- Directory di output ---
+
+OUTPUT_DIR="/tmp"
+
+# Fallback se /tmp non è scrivibile
+if [ ! -w "$OUTPUT_DIR" ]; then
+    OUTPUT_DIR="$HOME/Pictures/paste_image"
+    mkdir -p "$OUTPUT_DIR"
+fi
+
+# --- Pulizia file temporanei vecchi ---
+# Rimuove immagini paste_image_* più vecchie di CLEANUP_DAYS per evitare accumulo
+find "$OUTPUT_DIR" -maxdepth 1 -name 'paste_image_*.png' -mtime +"$CLEANUP_DAYS" -delete 2>/dev/null || true
+find "$OUTPUT_DIR" -maxdepth 1 -name 'paste_image_*.jpg' -mtime +"$CLEANUP_DAYS" -delete 2>/dev/null || true
+
+# --- Salva finestra attiva ---
+
+ACTIVE_WINDOW=$(xdotool getactivewindow 2>/dev/null || true)
+
+# --- Rileva MIME type immagine negli appunti ---
+
+TARGETS=$(xclip -selection clipboard -t TARGETS -o 2>/dev/null || true)
+
+if [ -z "$TARGETS" ]; then
+    notify "Appunti vuoti — nessuna immagine trovata"
+    exit 1
+fi
+
+MIME=""
+EXT=""
+
+if echo "$TARGETS" | grep -q "image/png"; then
+    MIME="image/png"
+    EXT="png"
+elif echo "$TARGETS" | grep -q "image/jpeg"; then
+    MIME="image/jpeg"
+    EXT="jpg"
+else
+    notify "Appunti non contengono un'immagine"
+    exit 1
+fi
+
+# --- Genera path univoco (atomico, sicuro) ---
+
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+
+# mktemp crea il file atomicamente con permessi 0600,
+# eliminando prevedibilità del nome e race condition TOCTOU
+FILE_PATH=$(mktemp "${OUTPUT_DIR}/paste_image_${TIMESTAMP}_XXXXXX.${EXT}") || {
+    notify "Errore nella creazione del file temporaneo"
+    exit 1
+}
+
+# --- Salva immagine dagli appunti ---
+
+if ! xclip -selection clipboard -t "$MIME" -o > "$FILE_PATH" 2>/dev/null; then
+    notify "Errore nel salvataggio dell'immagine"
+    rm -f "$FILE_PATH"
+    exit 1
+fi
+
+# Verifica che il file non sia vuoto
+if [ ! -s "$FILE_PATH" ]; then
+    notify "Immagine vuota negli appunti"
+    rm -f "$FILE_PATH"
+    exit 1
+fi
+
+# --- Ripristina focus e digita path ---
+
+if [ -n "$ACTIVE_WINDOW" ]; then
+    xdotool windowfocus --sync "$ACTIVE_WINDOW" 2>/dev/null || true
+    sleep "$TYPING_DELAY"
+    xdotool type --clearmodifiers --window "$ACTIVE_WINDOW" "$FILE_PATH"
+else
+    # Fallback: digita senza specificare la finestra
+    sleep "$TYPING_DELAY"
+    xdotool type --clearmodifiers "$FILE_PATH"
+fi
+
+notify "Immagine incollata: $(basename "$FILE_PATH")"

@@ -1,0 +1,33 @@
+# Claude Code settings locali
+.claude/
+
+# Documenti interni di progetto
+doc_progetto/
+
+# Report attività
+docs/
+
+# Log
+*.log
+firebase-debug.log
+
+# File temporanei generati dallo script
+/tmp/paste_image_*
+
+# OS
+.DS_Store
+Thumbs.db
+*~
+*.swp
+*.swo
+
+# Credenziali e chiavi
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.jks
+*.keystore
+credentials.json
+service-account*.json
