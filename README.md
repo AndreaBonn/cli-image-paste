@@ -1,130 +1,228 @@
-# paste-image
+# cli-image-paste
 
-Incolla immagini dalla clipboard direttamente nel terminale, pronte per essere inviate a qualsiasi coding assistant CLI.
+Paste images from your clipboard directly into the terminal as file paths — ready for any CLI coding assistant.
 
-Premi uno shortcut da tastiera: l'immagine viene salvata come file temporaneo e il path viene digitato automaticamente nel terminale attivo.
+Press a keyboard shortcut, and the clipboard image is saved as a temporary file with its path automatically typed into the active terminal window.
 
-## Perché
+## Why
 
-I coding assistant CLI come [Claude Code](https://docs.anthropic.com/en/docs/claude-code), [Aider](https://aider.chat), [Gemini CLI](https://github.com/google-gemini/gemini-cli) e altri accettano immagini come input, ma non offrono un modo nativo per incollarle dalla clipboard del sistema. Questo tool colma il gap: copia un'immagine, premi lo shortcut, e il path del file viene digitato nel terminale pronto per l'invio.
+CLI coding assistants like [Claude Code](https://docs.anthropic.com/en/docs/claude-code), [Aider](https://aider.chat), [Gemini CLI](https://github.com/google-gemini/gemini-cli), and others accept image files as input but have no native way to paste images from the system clipboard. This tool bridges that gap: copy an image, press the shortcut, and the file path is typed into the terminal — ready to send.
 
-Funziona con qualsiasi tool CLI che accetta path di file come input.
+Works with **any CLI tool** that accepts file paths as input.
 
-## Requisiti di sistema
+## Demo
 
-| Requisito               | Dettaglio                                               |
-| ----------------------- | ------------------------------------------------------- |
-| **OS**                  | Ubuntu (o altra distribuzione Linux con GNOME)          |
-| **Display server**      | X11 (non Wayland)                                       |
-| **Desktop environment** | GNOME (per la configurazione automatica dello shortcut) |
+```
+# 1. Copy an image (screenshot, browser image, etc.)
+# 2. Focus on the terminal running your coding assistant
+# 3. Press Ctrl+Shift+V
+# 4. The path gets typed automatically:
 
-**Formati immagine supportati:** PNG, JPEG.
+/tmp/paste_image_20260309_143022_a1b2c3.png
+```
 
-## Installazione
+## Features
+
+- Global GNOME keyboard shortcut (configurable)
+- Automatic image type detection (PNG/JPEG)
+- Secure atomic file creation via `mktemp`
+- Window focus management (remembers which terminal had focus)
+- Desktop notifications for success and errors
+- Automatic cleanup of temporary files older than 7 days
+- Log rotation with race-condition-safe writes
+- Cross-distro dependency installation (apt/dnf/pacman)
+
+## System Requirements
+
+| Requirement             | Detail                                                    |
+| ----------------------- | --------------------------------------------------------- |
+| **OS**                  | Linux (Ubuntu, Fedora, Arch, or other GNOME-based distro) |
+| **Display server**      | X11 (Wayland is not supported)                            |
+| **Desktop environment** | GNOME (for automatic shortcut configuration)              |
+| **Shell**               | Bash 4.0+                                                 |
+
+**Supported image formats:** PNG, JPEG.
+
+## Installation
 
 ```bash
-git clone <repository-url>
-cd paste-images-cli
+git clone https://github.com/user/cli-image-paste.git
+cd cli-image-paste
 bash install.sh
 ```
 
-L'installer si occupa di tutto:
+The installer handles everything:
 
-1. Installa le dipendenze mancanti (`xclip`, `xdotool`, `libnotify-bin`)
-2. Copia lo script in `~/.local/bin/`
-3. Configura il PATH se non include `~/.local/bin`
-4. Configura lo shortcut globale GNOME (default: `Ctrl+Shift+V`)
-5. Verifica che il servizio `gsd-media-keys` sia attivo (lo riavvia se necessario)
+1. Detects and installs missing dependencies (`xclip`, `xdotool`, `libnotify-bin`)
+2. Copies the script to `~/.local/bin/paste-image`
+3. Adds `~/.local/bin` to your PATH if needed
+4. Configures a GNOME global keyboard shortcut (default: `Ctrl+Shift+V`)
+5. Verifies the `gsd-media-keys` service is running
 
-## Come funziona
+You'll be prompted to choose a custom shortcut or accept the default.
 
-1. **Copia un'immagine** negli appunti (screenshot, immagine da browser, ecc.)
-2. **Porta il focus** sul terminale dove gira il coding assistant
-3. **Premi lo shortcut** (default: `Ctrl+Shift+V`)
-4. Lo script salva l'immagine dalla clipboard in `/tmp/paste_image_<timestamp>.png`
-5. Il path del file viene digitato automaticamente nel terminale tramite `xdotool`
-6. **Premi Invio** per inviare l'immagine al coding assistant
+### Dependencies
 
-## Cambiare lo shortcut
+| Dependency    | Purpose                             | Package (apt)   |
+| ------------- | ----------------------------------- | --------------- |
+| `xclip`       | Read images from X11 clipboard      | `xclip`         |
+| `xdotool`     | Simulate keyboard input in terminal | `xdotool`       |
+| `notify-send` | Desktop notifications               | `libnotify-bin` |
+| `python3`     | JSON config manipulation            | `python3`       |
 
-Durante l'installazione puoi scegliere un shortcut personalizzato. Dopo l'installazione puoi modificarlo con:
+All dependencies are installed automatically during setup. If you prefer manual installation:
+
+```bash
+# Ubuntu/Debian
+sudo apt install xclip xdotool libnotify-bin
+
+# Fedora
+sudo dnf install xclip xdotool libnotify
+
+# Arch
+sudo pacman -S xclip xdotool libnotify
+```
+
+## Usage
+
+### Via keyboard shortcut (recommended)
+
+1. **Copy an image** to your clipboard (screenshot, right-click > copy image, etc.)
+2. **Focus on the terminal** where your coding assistant is running
+3. **Press the shortcut** (default: `Ctrl+Shift+V`)
+4. The image is saved and its path is typed into the terminal
+5. **Press Enter** to send it to the coding assistant
+
+### Manual invocation
+
+```bash
+paste-image            # Run the script directly
+paste-image --version  # Show version
+paste-image -v         # Show version (short form)
+```
+
+## Configuration
+
+### Changing the keyboard shortcut
+
+During installation you can choose a custom shortcut. After installation, change it with:
 
 ```bash
 gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/paste-image/ binding "<Control><Alt>v"
 ```
 
-Formato dei tasti modificatori: `<Control>`, `<Shift>`, `<Alt>`, `<Super>`.
+Modifier key format: `<Control>`, `<Shift>`, `<Alt>`, `<Super>`.
 
-Puoi anche modificarlo da **Impostazioni > Tastiera > Scorciatoie > Scorciatoie personalizzate**.
+You can also change it from **Settings > Keyboard > Shortcuts > Custom Shortcuts**.
 
-> **Nota:** `Ctrl+Shift+V` è anche il "paste" standard dei terminali Linux. Se questo crea conflitti, scegli un altro shortcut (es. `<Control><Alt>v`).
+> **Note:** `Ctrl+Shift+V` is the default paste shortcut in most Linux terminals. If this causes conflicts, choose a different shortcut (e.g. `<Control><Alt>v`).
 
-## Disinstallazione
+### Script configuration
+
+The following constants can be edited directly in `~/.local/bin/paste-image`:
+
+| Constant         | Default | Description                              |
+| ---------------- | ------- | ---------------------------------------- |
+| `MAX_LOG_LINES`  | `500`   | Log rotation threshold (lines)           |
+| `NOTIFY_TIMEOUT` | `3000`  | Notification duration (milliseconds)     |
+| `CLEANUP_DAYS`   | `7`     | Auto-delete temp files older than N days |
+| `TYPING_DELAY`   | `0.1`   | Delay before typing path (seconds)       |
+
+### Log files
+
+Logs are stored at `~/.local/state/paste-image/paste_image.log` (or `$XDG_STATE_HOME/paste-image/` if set).
+
+## Uninstallation
 
 ```bash
 bash uninstall.sh
 ```
 
-Rimuove lo script e lo shortcut GNOME. Le dipendenze di sistema non vengono rimosse (potrebbero essere usate da altri programmi). I file temporanei in `/tmp/paste_image_*` più vecchi di 7 giorni vengono rimossi automaticamente ad ogni invocazione dello script; quelli più recenti vengono rimossi al riavvio del sistema.
+This removes the script and the GNOME keyboard shortcut. System dependencies are intentionally left installed (they may be used by other programs). Temporary files in `/tmp/paste_image_*` older than 7 days are cleaned automatically on each invocation; newer ones are removed on system reboot.
 
 ## Troubleshooting
 
-### Il path non appare nel terminale
+### The path doesn't appear in the terminal
 
-- Verifica che il terminale abbia il focus quando premi lo shortcut
-- Verifica che X11 sia in uso: `echo $XDG_SESSION_TYPE` deve restituire `x11`
-- Prova a eseguire `paste-image` manualmente dal terminale per vedere eventuali errori
+- Make sure the terminal has focus when you press the shortcut
+- Verify X11 is in use: `echo $XDG_SESSION_TYPE` should return `x11`
+- Try running `paste-image` manually to see error output
 
-### Notifica "Nessuna immagine negli appunti"
+### "No image in clipboard" notification
 
-- Assicurati di aver copiato un'immagine (non testo)
-- Alcune applicazioni non copiano immagini nella clipboard di sistema
+- Make sure you copied an actual image (not text or a file)
+- Some applications don't copy images to the system clipboard
 
-### Lo shortcut non funziona ma il lancio manuale sì
+### Shortcut doesn't work but manual invocation does
 
-Il servizio GNOME che gestisce gli shortcut custom (`gsd-media-keys`) potrebbe non essere in esecuzione. Verifica e riavvialo:
+The GNOME service that handles custom shortcuts (`gsd-media-keys`) may not be running:
 
 ```bash
-# Verifica se è attivo
+# Check if it's active
 pgrep -x gsd-media-keys
 
-# Se non restituisce nulla, riavvialo
+# If it returns nothing, restart it
 systemctl --user start org.gnome.SettingsDaemon.MediaKeys.target
 ```
 
-Se il problema persiste:
+If the problem persists:
 
-- Verifica che lo shortcut sia registrato: `gsettings get org.gnome.settings-daemon.plugins.media-keys custom-keybindings`
-- Verifica che non ci siano conflitti con altri shortcut del sistema
+- Verify the shortcut is registered: `gsettings get org.gnome.settings-daemon.plugins.media-keys custom-keybindings`
+- Check for conflicts with other system shortcuts
 
-### Dipendenze mancanti
+### Image saves but path isn't typed
+
+- Increase `TYPING_DELAY` in the script configuration (default: `0.1` seconds)
+- Some terminal emulators may need a longer delay for `xdotool` to work correctly
+
+## Project Structure
+
+```
+cli-image-paste/
+├── paste-image          # Main script
+├── install.sh           # Installation script
+├── uninstall.sh         # Uninstallation script
+├── README.md            # This file
+├── .gitignore           # Git exclusion rules
+├── .shellcheckrc        # ShellCheck linter configuration
+├── tests/               # Test suite
+│   ├── run_tests.sh         # Test runner
+│   ├── test_framework.sh    # Custom test framework
+│   ├── test_paste_image.sh  # Main script tests
+│   ├── test_install.sh      # Installation tests
+│   └── test_uninstall.sh    # Uninstallation tests
+└── docs/                # Documentation
+```
+
+## Running Tests
 
 ```bash
-sudo apt install xclip xdotool libnotify-bin
+bash tests/run_tests.sh
 ```
 
-## Struttura del progetto
+The test suite includes 50+ test cases covering the main script, installation, and uninstallation flows. Tests use mocked system utilities for safe execution.
 
-```
-paste-images-cli/
-├── paste-image        # Script principale
-├── install.sh         # Script di installazione
-├── uninstall.sh       # Script di disinstallazione
-├── README.md          # Questo file
-├── .gitignore         # File esclusi dal version control
-├── .shellcheckrc      # Configurazione ShellCheck (linter bash)
-├── tests/             # Test suite
-│   ├── run_tests.sh       # Runner dei test
-│   ├── test_framework.sh  # Framework di test custom
-│   ├── test_paste_image.sh
-│   ├── test_install.sh
-│   └── test_uninstall.sh
-└── docs/              # Documentazione aggiuntiva
+Static analysis with ShellCheck:
+
+```bash
+shellcheck paste-image install.sh uninstall.sh
 ```
 
-## Limitazioni
+## Limitations
 
-- **Solo X11:** non compatibile con Wayland (servirebbe `wl-paste` + `ydotool`)
-- **Solo GNOME:** la configurazione automatica dello shortcut usa `gsettings`
-- **Il terminale deve avere il focus** al momento della pressione dello shortcut
-- Supporta solo immagini **PNG** e **JPEG** nella clipboard
+- **X11 only** — not compatible with Wayland (would require `wl-paste` + `ydotool`)
+- **GNOME only** — automatic shortcut configuration uses `gsettings`
+- **Terminal must have focus** when the shortcut is pressed
+- Only **PNG** and **JPEG** images are supported
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/my-feature`)
+3. Make sure all tests pass (`bash tests/run_tests.sh`)
+4. Make sure ShellCheck passes (`shellcheck paste-image install.sh uninstall.sh`)
+5. Commit your changes and open a pull request
+
+## License
+
+This project is open source. See the [LICENSE](LICENSE) file for details.
