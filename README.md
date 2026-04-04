@@ -1,3 +1,7 @@
+> **Language:** English | [Italiano](README.it.md)
+>
+> **See also:** [Security Policy (EN)](SECURITY.md) · [Politica di Sicurezza (IT)](SECURITY.it.md)
+
 # cli-image-paste
 
 Paste images from your clipboard directly into the terminal as file paths — ready for any CLI coding assistant.
@@ -182,7 +186,11 @@ cli-image-paste/
 ├── paste-image          # Main script
 ├── install.sh           # Installation script
 ├── uninstall.sh         # Uninstallation script
-├── README.md            # This file
+├── README.md            # Documentation (English)
+├── README.it.md         # Documentation (Italian)
+├── SECURITY.md          # Security policy (English)
+├── SECURITY.it.md       # Security policy (Italian)
+├── LICENSE              # MIT License
 ├── .gitignore           # Git exclusion rules
 ├── .shellcheckrc        # ShellCheck linter configuration
 ├── tests/               # Test suite
@@ -223,6 +231,10 @@ shellcheck paste-image install.sh uninstall.sh
 4. Make sure ShellCheck passes (`shellcheck paste-image install.sh uninstall.sh`)
 5. Commit your changes and open a pull request
 
+## Security
+
+For information about security considerations and how to report vulnerabilities, see [SECURITY.md](SECURITY.md).
+
 ## License
 
-This project is open source. See the [LICENSE](LICENSE) file for details.
+This project is licensed under the [MIT License](LICENSE).
