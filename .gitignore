@@ -1,5 +1,6 @@
 # Claude Code settings locali
 .claude/
+.vscode/
 
 # Documenti interni di progetto
 doc_progetto/

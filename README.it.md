@@ -25,16 +25,21 @@ Funziona con **qualsiasi tool CLI** che accetta percorsi file come input.
 /tmp/paste_image_20260309_143022_a1b2c3.png
 ```
 
+Il nome del file include un timestamp e un suffisso casuale generato da `mktemp` per sicurezza e unicità.
+
 ## Funzionalità
 
 - Scorciatoia da tastiera globale GNOME (configurabile)
 - Rilevamento automatico del tipo di immagine (PNG/JPEG)
-- Creazione sicura e atomica dei file tramite `mktemp`
+- Creazione sicura e atomica dei file tramite `mktemp` con permessi `0600`
 - Gestione del focus della finestra (ricorda quale terminale era attivo)
-- Notifiche desktop per successi ed errori
+- Notifiche desktop per successi ed errori (con fallback su zenity)
 - Pulizia automatica dei file temporanei più vecchi di 7 giorni
-- Rotazione dei log con scritture sicure contro race condition
+- Rotazione dei log con scritture sicure contro race condition tramite `flock`
 - Installazione dipendenze cross-distro (apt/dnf/pacman)
+- Supporto flag versione (`--version`, `-v`)
+- Suite di test completa (50+ casi di test)
+- Codice validato con ShellCheck
 
 ## Requisiti di Sistema
 
@@ -136,13 +141,25 @@ Le seguenti costanti possono essere modificate direttamente in `~/.local/bin/pas
 
 I log sono salvati in `~/.local/state/paste-image/paste_image.log` (oppure `$XDG_STATE_HOME/paste-image/` se impostato).
 
+- Formato: `[YYYY-MM-DD HH:MM:SS] messaggio`
+- Rotazione automatica a 500 righe (mantiene ultime 250)
+- Scritture sicure contro race condition tramite `flock`
+- Contiene solo timestamp e percorsi file (nessun contenuto degli appunti)
+
 ## Disinstallazione
 
 ```bash
 bash uninstall.sh
 ```
 
-Questo rimuove lo script e la scorciatoia da tastiera GNOME. Le dipendenze di sistema vengono intenzionalmente lasciate installate (potrebbero essere usate da altri programmi). I file temporanei in `/tmp/paste_image_*` più vecchi di 7 giorni vengono puliti automaticamente ad ogni invocazione; quelli più recenti vengono rimossi al riavvio del sistema.
+Questo rimuove:
+- Lo script da `~/.local/bin/paste-image`
+- La scorciatoia da tastiera GNOME
+- Le modifiche PATH da `.bashrc` e `.zshrc`
+- La directory log (`~/.local/state/paste-image/`)
+- I file temporanei in `/tmp/paste_image_*`
+
+Le dipendenze di sistema vengono intenzionalmente lasciate installate (potrebbero essere usate da altri programmi). I file temporanei più vecchi di 7 giorni vengono puliti automaticamente ad ogni invocazione; quelli più recenti vengono rimossi al riavvio del sistema.
 
 ## Risoluzione Problemi
 
@@ -208,13 +225,21 @@ cli-image-paste/
 bash tests/run_tests.sh
 ```
 
-La suite di test include 50+ casi di test che coprono lo script principale, i flussi di installazione e disinstallazione. I test usano utility di sistema mockate per un'esecuzione sicura.
+La suite di test include 50+ casi di test che coprono:
+
+- Funzionalità script principale (18 test): verifica dipendenze, gestione clipboard, rilevamento MIME type, sicurezza mktemp, pulizia file, notifiche, flag versione
+- Flusso installazione (12 test): installazione dipendenze, configurazione PATH, manipolazione array gsettings, rilevamento conflitti shortcut, idempotenza
+- Flusso disinstallazione (7 test): rimozione script, pulizia gsettings, pulizia PATH
+
+I test usano utility di sistema mockate per un'esecuzione sicura senza richiedere X11 o GNOME reali.
 
 Analisi statica con ShellCheck:
 
 ```bash
 shellcheck paste-image install.sh uninstall.sh
 ```
+
+Tutti gli script passano la validazione ShellCheck senza warning.
 
 ## Limitazioni
 

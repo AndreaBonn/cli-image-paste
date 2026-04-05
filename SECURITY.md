@@ -46,6 +46,7 @@ This tool interacts with several system-level components. Users should be aware 
 - Files are created using `mktemp` with atomic operations to prevent race conditions
 - File permissions are set to `600` (owner read/write only)
 - Predictable filename patterns are mitigated by the random suffix from `mktemp`
+- Format: `/tmp/paste_image_YYYYMMDD_HHMMSS_RANDOM.EXT` where RANDOM is a 6-character suffix
 
 ### Installation
 
@@ -57,7 +58,8 @@ This tool interacts with several system-level components. Users should be aware 
 
 - Logs are stored in `~/.local/state/paste-image/` with user-only permissions
 - Logs contain file paths and timestamps — no clipboard content is logged
-- Log rotation is enforced to prevent unbounded growth
+- Log rotation is enforced to prevent unbounded growth (max 500 lines, keeps last 250)
+- Race-condition-safe writes using `flock` prevent log corruption in concurrent scenarios
 
 ## Best Practices for Users
 
@@ -65,3 +67,6 @@ This tool interacts with several system-level components. Users should be aware 
 - Keep your system dependencies updated
 - Use a dedicated clipboard manager if you handle sensitive data frequently
 - The tool only operates under X11 — Wayland is not supported
+- Temporary files are automatically cleaned after 7 days
+- Check logs periodically: `cat ~/.local/state/paste-image/paste_image.log`
+- Run the test suite to verify integrity: `bash tests/run_tests.sh`

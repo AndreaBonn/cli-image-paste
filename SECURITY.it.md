@@ -46,6 +46,7 @@ Questo tool interagisce con diversi componenti a livello di sistema. Gli utenti 
 - I file vengono creati usando `mktemp` con operazioni atomiche per prevenire race condition
 - I permessi dei file sono impostati a `600` (lettura/scrittura solo per il proprietario)
 - I pattern prevedibili nei nomi dei file sono mitigati dal suffisso casuale di `mktemp`
+- Formato: `/tmp/paste_image_YYYYMMDD_HHMMSS_RANDOM.EXT` dove RANDOM è un suffisso di 6 caratteri
 
 ### Installazione
 
@@ -57,7 +58,8 @@ Questo tool interagisce con diversi componenti a livello di sistema. Gli utenti 
 
 - I log sono salvati in `~/.local/state/paste-image/` con permessi solo per l'utente
 - I log contengono percorsi file e timestamp — nessun contenuto degli appunti viene registrato
-- La rotazione dei log è applicata per prevenire una crescita illimitata
+- La rotazione dei log è applicata per prevenire una crescita illimitata (max 500 righe, mantiene ultime 250)
+- Scritture sicure contro race condition tramite `flock` prevengono corruzione log in scenari concorrenti
 
 ## Buone Pratiche per gli Utenti
 
@@ -65,3 +67,6 @@ Questo tool interagisce con diversi componenti a livello di sistema. Gli utenti 
 - Mantieni aggiornate le dipendenze di sistema
 - Usa un gestore di appunti dedicato se gestisci frequentemente dati sensibili
 - Il tool funziona solo sotto X11 — Wayland non è supportato
+- I file temporanei vengono automaticamente eliminati dopo 7 giorni
+- Controlla periodicamente i log: `cat ~/.local/state/paste-image/paste_image.log`
+- Esegui la suite di test per verificare l'integrità: `bash tests/run_tests.sh`
