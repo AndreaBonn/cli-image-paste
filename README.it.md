@@ -2,6 +2,15 @@
 >
 > **Vedi anche:** [Politica di Sicurezza (IT)](SECURITY.it.md) · [Security Policy (EN)](SECURITY.md)
 
+<div align="center">
+
+[![CI](https://github.com/AndreaBonn/cli-image-paste/actions/workflows/ci.yml/badge.svg)](https://github.com/AndreaBonn/cli-image-paste/actions/workflows/ci.yml)
+[![ShellCheck](https://img.shields.io/badge/ShellCheck-passing-brightgreen.svg)](https://github.com/koalaman/shellcheck)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Security Policy](https://img.shields.io/badge/security-policy-blueviolet.svg)](SECURITY.md)
+
+</div>
+
 # cli-image-paste
 
 Incolla immagini dagli appunti direttamente nel terminale come percorsi file — pronto per qualsiasi assistente di coding da CLI.
