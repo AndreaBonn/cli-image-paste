@@ -5,8 +5,10 @@
 # Documenti interni di progetto
 doc_progetto/
 
-# Report attività
-docs/
+# Report attività e docs interni (docs/* consente eccezioni)
+docs/*
+!docs/ARCHITECTURE.md
+!docs/ARCHITECTURE.it.md
 
 # Log
 *.log

@@ -23,6 +23,70 @@ Gli assistenti di coding da CLI come [Claude Code](https://docs.anthropic.com/en
 
 Funziona con **qualsiasi tool CLI** che accetta percorsi file come input.
 
+## Architettura
+
+```mermaid
+%%{init: {'theme': 'default'}}%%
+graph TD
+  subgraph scripts["Script CLI"]
+    direction LR
+    paste_image["paste-image"]
+    install["install.sh"]
+    uninstall["uninstall.sh"]
+  end
+
+  subgraph x11["Strumenti X11"]
+    direction LR
+    xclip["xclip"]
+    xdotool["xdotool"]
+  end
+
+  subgraph sys["Utilità di Sistema"]
+    direction LR
+    mktemp["mktemp"]
+    flock["flock"]
+    notify["notify-send / zenity"]
+  end
+
+  subgraph gnome_cfg["Configurazione GNOME"]
+    direction LR
+    gsettings["gsettings"]
+    python3["python3"]
+    systemctl["systemctl"]
+    pkg_mgr["apt / dnf / pacman"]
+  end
+
+  subgraph store["Percorsi di Archiviazione"]
+    direction LR
+    local_bin["~/.local/bin"]
+    tmp_dir["/tmp/paste_image_*"]
+    state_dir["~/.local/state"]
+  end
+
+  paste_image --> x11
+  paste_image --> sys
+  paste_image -.-> tmp_dir
+  paste_image -.-> state_dir
+
+  install --> gnome_cfg
+  install -.-> local_bin
+
+  uninstall --> gsettings
+  uninstall --> python3
+
+  classDef core fill:#2563eb,stroke:#1d4ed8,color:#fff
+  classDef data fill:#d97706,stroke:#b45309,color:#fff
+  classDef ext fill:#6b7280,stroke:#4b5563,color:#fff
+  classDef engine fill:#059669,stroke:#047857,color:#fff
+
+  class paste_image,install,uninstall core
+  class xclip,xdotool engine
+  class mktemp,flock,notify,gsettings,python3,systemctl,pkg_mgr ext
+  class local_bin,tmp_dir,state_dir data
+```
+
+> Per diagrammi tecnici dettagliati (flusso installazione, pipeline CI/CD), vedi [docs/ARCHITECTURE.it.md](docs/ARCHITECTURE.it.md).
+
 ## Demo
 
 ```
@@ -35,6 +99,42 @@ Funziona con **qualsiasi tool CLI** che accetta percorsi file come input.
 ```
 
 Il nome del file include un timestamp e un suffisso casuale generato da `mktemp` per sicurezza e unicità.
+
+### Come funziona
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor user as Utente
+  participant gnome as GNOME
+  participant script as paste-image
+  participant xclip as xclip
+  participant fs as File System
+  participant xdotool as xdotool
+  participant notif as notify-send
+
+  user->>gnome: Premi Ctrl+Shift+V
+  gnome->>script: Invoca paste-image
+  script->>script: Verifica dipendenze
+  script->>script: Salva ID finestra attiva
+  script->>xclip: Leggi TARGETS clipboard
+  xclip-->>script: Lista tipi MIME
+
+  alt Nessuna immagine nella clipboard
+    script->>notif: Mostra notifica errore
+    notif-->>user: Nessuna immagine
+  else PNG o JPEG rilevato
+    script->>fs: mktemp file sicuro
+    fs-->>script: /tmp/paste_image_*.png
+    script->>xclip: Estrai dati immagine
+    xclip-->>fs: Scrivi binario su file
+    script->>script: Verifica file non vuoto
+    script->>xdotool: Ripristina focus finestra
+    script->>xdotool: Digita percorso file
+    xdotool-->>user: Percorso appare nel terminale
+    script->>notif: Notifica successo
+  end
+```
 
 ## Funzionalità
 
