@@ -372,3 +372,13 @@ For information about security considerations and how to report vulnerabilities,
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
+
+## Support the project
+
+cli-image-paste is free to use. If it helps you and you want to give something back, you can leave a tip via PayPal. The amount is up to you and it is entirely optional.
+
+<div align="center">
+
+[![Donate with PayPal](https://img.shields.io/badge/Donate-PayPal-00457C?logo=paypal&logoColor=white&style=for-the-badge)](https://paypal.me/AndreaBonacci19)
+
+</div>
