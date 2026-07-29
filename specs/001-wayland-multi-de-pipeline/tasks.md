@@ -17,7 +17,7 @@ Legenda requisito: `F<n>` = feature del backlog originale, `S<n>` = mitigazione 
 
 Suite: 12 file di test, 145 casi, ShellCheck pulito su 32 file, gate dimensionale e di purezza dei moduli attivi.
 
-Bloccanti aperti: **B1** (`wl-copy` sopravvive alla morte dello script lanciato da keybinding?) resta non verificato, servono `wl-clipboard` e `sway` installati. **B2** risolto: `xdotool` sintetizza `Return` per un CR e `Linefeed` per un LF, quindi il rischio S2 è confermato reale, non teorico. Dettagli in `doc_progetto/spike-wayland.md`.
+Bloccanti: **B1 risolto** il 2026-07-29 con misurazione su sway reale. `wl-copy` resta nel process group del chiamante e uccidendolo la selezione va perduta, quindi la consegna via appunti usa `setsid`; `xclip` su X11 si stacca già da solo. **B2 risolto**: `xdotool` sintetizza `Return` per un CR e `Linefeed` per un LF, quindi il rischio S2 è reale e non teorico. **B3 risolto**: il repo resta `cli-image-paste`. Verifica L3 end-to-end su Wayland eseguita, esiti in `doc_progetto/spike-wayland.md`. Resta non verificato KDE, per assenza di hardware.
 
 ## Fase 0 — Fondamenta (11h)
 

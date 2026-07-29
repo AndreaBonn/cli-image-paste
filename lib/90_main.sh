@@ -235,9 +235,14 @@ main() {
     local file_path
     file_path=$(acquire_image "$output_dir") || exit 1
 
-    deliver_path "$file_path" "$active_window" || exit 1
+    local hint
+    hint=$(deliver_path "$file_path" "$active_window") || exit 1
 
-    notify "Immagine incollata: $(basename "$file_path")"
+    if [ -n "$hint" ]; then
+        notify "$hint"
+    else
+        notify "Immagine incollata: $(basename "$file_path")"
+    fi
 }
 
 # --- Consegna ---
@@ -271,8 +276,10 @@ deliver_path() {
         fi
     fi
 
-    hint=$(delivery_hint "$backend")
-    [ -n "$hint" ] && notify "$hint"
+    # L'hint viene stampato, non notificato: l'orchestratore lo unisce al
+    # messaggio finale. Due notifiche consecutive per una sola azione sono
+    # rumore, e la seconda copre la prima prima che si riesca a leggerla.
+    delivery_hint "$backend"
     return 0
 }
 

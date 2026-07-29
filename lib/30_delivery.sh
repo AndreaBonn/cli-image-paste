@@ -154,12 +154,18 @@ _delivery_clipboard_send() {
 
     case "$tool" in
         wl-copy)
-            printf '%s' "$text" | wl-copy
+            # setsid non è un dettaglio: misurato su sway, wl-copy resta nel
+            # process group del chiamante, e un desktop che termina il gruppo
+            # dello script lanciato da shortcut porta via con sé il processo
+            # che tiene la selezione. Il path sparirebbe dagli appunti prima
+            # che l'utente riesca a incollarlo, proprio nella modalità che su
+            # GNOME Wayland è quella principale.
+            printf '%s' "$text" | setsid wl-copy
             ;;
         xclip)
-            # xclip mantiene la selezione con un processo che sopravvive al
-            # chiamante: verificato, il contenuto resta leggibile dopo
-            # l'uscita dello script.
+            # xclip si stacca da solo: misurato, il processo residente finisce
+            # in un process group diverso da quello del chiamante, quindi qui
+            # setsid non serve.
             printf '%s' "$text" | xclip -selection clipboard -i
             ;;
     esac

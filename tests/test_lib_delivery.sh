@@ -113,7 +113,10 @@ test_sway_prefers_wtype() {
 }
 
 test_missing_tool_falls_through() {
-    # wtype non installato: la catena scende alla voce successiva
+    # PATH ristretto: senza questo il test dipenderebbe da cosa è installato
+    # sulla macchina di sviluppo, e passerebbe o fallirebbe a seconda che
+    # wtype ci sia o no.
+    setup_restricted_path
     create_mock "wl-copy" ""
     export XDG_STATE_HOME="$TEST_TMPDIR/state" PASTE_IMAGE_SESSION_TYPE=wayland
     assert_equals "clipboard" "$(delivery_select_backend wayland sway)" \
@@ -156,6 +159,18 @@ test_send_via_clipboard_uses_wl_copy_on_wayland() {
     export PASTE_IMAGE_SESSION_TYPE=wayland
     delivery_send clipboard "/tmp/x.png" >/dev/null 2>&1
     assert_mock_called "wl-copy" "wl-copy invocato su Wayland"
+    unset PASTE_IMAGE_SESSION_TYPE
+}
+
+# Misurato su sway: senza setsid wl-copy resta nel process group del
+# chiamante, e chi termina quel gruppo porta via la selezione prima che
+# l'utente possa incollare.
+test_wl_copy_is_detached_from_process_group() {
+    create_mock "wl-copy" ""
+    create_mock "setsid" ""
+    export PASTE_IMAGE_SESSION_TYPE=wayland
+    delivery_send clipboard "/tmp/x.png" >/dev/null 2>&1
+    assert_mock_called_with "setsid" "wl-copy" "wl-copy lanciato tramite setsid"
     unset PASTE_IMAGE_SESSION_TYPE
 }
 
@@ -214,6 +229,7 @@ run_test "ydotool saltato senza daemon" test_ydotool_skipped_without_daemon
 run_test "Invio via xdotool" test_send_via_xdotool_passes_text
 run_test "Appunti via wl-copy su Wayland" test_send_via_clipboard_uses_wl_copy_on_wayland
 run_test "Appunti via xclip su X11" test_send_via_clipboard_uses_xclip_on_x11
+run_test "wl-copy staccato dal process group" test_wl_copy_is_detached_from_process_group
 run_test "Backend sconosciuto fallisce" test_unknown_backend_fails
 run_test "Il messaggio dichiara la sovrascrittura" test_clipboard_hint_mentions_overwrite
 run_test "Nessun messaggio con digitazione" test_typing_hint_is_empty
