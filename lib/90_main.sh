@@ -92,6 +92,13 @@ main() {
     local file_path
     file_path=$(acquire_image "$output_dir") || exit 1
 
+    # Gli intermedi della pipeline non sopravvivono all'uscita, nemmeno se
+    # qualcosa fallisce a metà: la pipeline moltiplica le copie di contenuto
+    # che può essere sensibile.
+    trap transform_cleanup_temps EXIT
+
+    file_path=$(transform_run "$file_path" "$output_dir")
+
     local hint
     hint=$(deliver_path "$file_path" "$active_window") || exit 1
 

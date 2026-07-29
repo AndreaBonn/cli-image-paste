@@ -198,6 +198,8 @@ test_svg_without_rasteriser_fails() {
     fi
 }
 
+
+
 run_test "magick preferito a convert" test_magick_bin_prefers_im7
 run_test "Fallback su convert" test_magick_bin_falls_back_to_im6
 run_test "Assenza di ImageMagick rilevata" test_magick_absent_is_reported
