@@ -91,9 +91,12 @@ test_no_exit_outside_main() {
         name=$(basename "$module")
         is_exempt "$name" && continue
 
-        # Cerca exit non commentati. Le funzioni ritornano exit code:
-        # la decisione di uscire appartiene a 90_main.sh.
-        if grep -nE '^[^#]*\bexit\b' "$module" | grep -vq 'flock'; then
+        # Cerca exit come COMANDO, non come parte di una parola: un flag
+        # chiamato --early-exit non è un'uscita, e segnalarlo insegnerebbe a
+        # ignorare il gate. Un comando sta a inizio riga o dopo un
+        # separatore, quindi il pattern lo ancora a quelli.
+        if grep -nE '(^|[;&|]|\bthen\b|\belse\b|\bdo\b)[[:space:]]*exit([[:space:]]|$)' "$module" \
+                | grep -v '^[[:space:]]*#' | grep -vq 'flock'; then
             _test_fail "$name contiene un exit fuori dall'orchestratore"
         fi
     done

@@ -129,3 +129,45 @@ transform_to_png() {
         *)             image_convert "$src" "$dst" "$mime" ;;
     esac
 }
+
+# --- Annotazione ---
+#
+# È l'unico step interattivo, quindi va per ultimo: tutto ciò che è
+# automatico deve essere già finito quando l'utente prende il controllo.
+# Serve a indicare "questo bottone qui" e a oscurare dati sensibili prima di
+# mandare uno screenshot a un servizio esterno.
+
+annotate_tool() {
+    local tool
+    for tool in satty swappy; do
+        command -v "$tool" &>/dev/null && { echo "$tool"; return 0; }
+    done
+    return 1
+}
+
+annotate_missing_message() {
+    echo "Per annotare serve satty o swappy. Installa con: sudo apt install swappy"
+}
+
+# Apre l'annotatore sul file e scrive il risultato su dst.
+#
+# Ritorna 0 con dst scritto, 2 se l'utente ha chiuso senza salvare, 1 su
+# errore. Chiudere senza salvare è una decisione: si consegna l'originale.
+annotate_run() {
+    local tool="$1" src="$2" dst="$3"
+
+    case "$tool" in
+        satty)  satty --filename "$src" --output-filename "$dst" --early-exit 2>/dev/null ;;
+        swappy) swappy -f "$src" -o "$dst" 2>/dev/null ;;
+        *)      return 1 ;;
+    esac
+
+    # Entrambi gli strumenti possono uscire con successo senza aver salvato:
+    # l'unico segnale affidabile è se il file di destinazione ha contenuto.
+    if [ ! -s "$dst" ]; then
+        rm -f "$dst"
+        return 2
+    fi
+
+    return 0
+}

@@ -262,6 +262,33 @@ on X11; elsewhere, and for any program not in the list, the bare path is used
 because it is always pasteable. Setting `FORMAT_TEMPLATE` in the config
 overrides detection.
 
+### Annotating before delivering
+
+```bash
+paste-image --annotate
+paste-image --screenshot --annotate
+```
+
+Opens satty or swappy so you can point at the thing you are asking about, or
+blur what should not leave your machine. It runs last, after any resizing,
+because annotations applied before a shrink come out unreadable.
+
+Closing the editor without saving delivers the original: that is a decision,
+not a failure. Asking for `--annotate` without either tool installed is an
+error, though, because silently ignoring a flag you just typed is worse than
+saying no.
+
+### Diagnostics
+
+```bash
+paste-image --doctor
+```
+
+Prints the detected session and desktop, which delivery backend was chosen
+and why, which tools are present, and any backend that was excluded after
+failing. Worth including in a bug report: the behaviour depends on the
+environment in ways that are invisible from the outside.
+
 ### Re-delivering the last image
 
 ```bash

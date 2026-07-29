@@ -191,3 +191,42 @@ _transform_is_our_file() {
     esac
 }
 
+
+# Applica l'annotazione interattiva. A differenza del resize, questo step
+# entra in gioco solo su richiesta esplicita dell'utente: ignorare un flag
+# appena scritto sarebbe il peggior esito possibile, quindi qui l'assenza
+# dello strumento è un errore e non una degradazione.
+transform_apply_annotate() {
+    local path="$1" dir="$2" tool annotated status
+
+    if ! tool=$(annotate_tool); then
+        notify "$(annotate_missing_message)"
+        return 1
+    fi
+
+    annotated=$(_transform_new_temp "$dir" png) || return 1
+
+    annotate_run "$tool" "$path" "$annotated"
+    status=$?
+
+    case "$status" in
+        0)
+            log "annotazione applicata con $tool"
+            echo "$annotated"
+            return 0
+            ;;
+        2)
+            # Chiudere senza salvare è una decisione: si prosegue con
+            # l'immagine originale, senza trattarlo come fallimento.
+            log "annotazione chiusa senza salvare"
+            rm -f "$annotated"
+            echo "$path"
+            return 0
+            ;;
+        *)
+            notify "Annotazione non riuscita con $tool"
+            rm -f "$annotated"
+            return 1
+            ;;
+    esac
+}

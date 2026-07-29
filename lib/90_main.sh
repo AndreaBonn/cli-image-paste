@@ -58,6 +58,17 @@ main() {
                 "$HOME/.local/bin/paste-image"
             exit $?
             ;;
+        --annotate|-a)
+            PASTE_IMAGE_ANNOTATE=1
+            ;;
+        --help|-h)
+            print_usage
+            exit 0
+            ;;
+        --doctor)
+            print_diagnostics
+            exit 0
+            ;;
         --last)
             PASTE_IMAGE_SOURCE="history"
             PASTE_IMAGE_HISTORY_INDEX="${2:-1}"
@@ -118,6 +129,10 @@ main() {
     trap transform_cleanup_temps EXIT
 
     file_path=$(transform_run "$file_path" "$output_dir")
+
+    if [ "${PASTE_IMAGE_ANNOTATE:-0}" = "1" ]; then
+        file_path=$(transform_apply_annotate "$file_path" "$output_dir") || exit 1
+    fi
 
     local hint
     hint=$(deliver_path "$file_path" "$active_window") || exit 1

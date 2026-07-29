@@ -264,6 +264,34 @@ dall'elenco, viene usato il percorso nudo, che è sempre incollabile.
 Impostare `FORMAT_TEMPLATE` nella configurazione ha la precedenza sul
 rilevamento.
 
+### Annotare prima di consegnare
+
+```bash
+paste-image --annotate
+paste-image --screenshot --annotate
+```
+
+Apre satty o swappy per indicare la cosa di cui stai parlando, oppure per
+oscurare quello che non deve lasciare la tua macchina. Viene eseguito per
+ultimo, dopo l'eventuale ridimensionamento, perché le annotazioni applicate
+prima di una riduzione risultano illeggibili.
+
+Chiudere l'editor senza salvare consegna l'originale: è una decisione, non un
+fallimento. Chiedere `--annotate` senza avere nessuno dei due strumenti è
+invece un errore, perché ignorare in silenzio un flag appena scritto è
+peggio che dire no.
+
+### Diagnostica
+
+```bash
+paste-image --doctor
+```
+
+Stampa la sessione e il desktop rilevati, quale backend di consegna è stato
+scelto, quali strumenti sono presenti, e gli eventuali backend esclusi dopo
+un fallimento. Vale la pena allegarlo a una segnalazione: il comportamento
+dipende dall'ambiente in modi che da fuori non si vedono.
+
 ### Riconsegnare l'ultima immagine
 
 ```bash
