@@ -11,11 +11,11 @@ Legenda requisito: `F<n>` = feature del backlog originale, `S<n>` = mitigazione 
 | 0 | **completa** | 0.1-0.11 fatti. Gate `code-reviewer` e `security-reviewer` superati, rilievi applicati. L'aggiornamento di `docs/ARCHITECTURE.*` è spostato a 5.3 (nota sotto). |
 | 1 | **completa** | `lib/10_env_detect.sh`, `lib/30_delivery.sh`, quattro backend, validazione del path, sezione Wayland nei README bilingui con avviso ydotool. |
 | 2 | **completa** | `lib/20_clipboard.sh` e `lib/40_transform.sh` integrati in `90_main.sh`: backend appunti xclip/wl-paste, priorità dei target, file dal file manager senza duplicazione, conversione WebP/GIF/TIFF/BMP/AVIF/SVG con policy ImageMagick dedicata. Docs aggiornate. |
-| 3 | non iniziata | Shortcut multi-desktop: KDE, window manager, dispatcher. |
+| 3 | **in gran parte fatta** | `lib/60_shortcut.sh` con conversioni pure verso KDE, sway, i3 e Hyprland; `install.sh` è un dispatcher che stampa la riga di config sui window manager e non fallisce più su desktop ignoti; default `<Super>v` su Wayland; flag `--print-shortcut`; dipendenze in `scripts/install-deps.sh`, ora dipendenti dalla sessione. **Manca 3.3**: scrittura effettiva di `kglobalshortcutsrc` su KDE, che oggi cade nel ramo generico "registra a mano". Mancano 3.5 (rimozione KDE) e 3.7 (docs). |
 | 4 | non iniziata | Pipeline P1: resize, formato adattivo, ring buffer, screenshot, annotazione. |
 | 5 | non iniziata | Distribuzione, `docs/ARCHITECTURE.*`, `MANUAL_TESTING.md`, naming. |
 
-Suite: 12 file di test, 145 casi, ShellCheck pulito su 32 file, gate dimensionale e di purezza dei moduli attivi.
+Suite: 14 file di test, 164 casi, ShellCheck pulito su 38 file, gate dimensionale e di purezza dei moduli attivi.
 
 Bloccanti: **B1 risolto** il 2026-07-29 con misurazione su sway reale. `wl-copy` resta nel process group del chiamante e uccidendolo la selezione va perduta, quindi la consegna via appunti usa `setsid`; `xclip` su X11 si stacca già da solo. **B2 risolto**: `xdotool` sintetizza `Return` per un CR e `Linefeed` per un LF, quindi il rischio S2 è reale e non teorico. **B3 risolto**: il repo resta `cli-image-paste`. Verifica L3 end-to-end su Wayland eseguita, esiti in `doc_progetto/spike-wayland.md`. Resta non verificato KDE, per assenza di hardware.
 
