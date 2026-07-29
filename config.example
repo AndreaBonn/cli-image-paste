@@ -1,0 +1,70 @@
+# Configurazione di paste-image
+#
+# Copiare in ~/.config/paste-image/config (o in $XDG_CONFIG_HOME/paste-image/config)
+# e decommentare le voci da modificare.
+#
+# Formato: CHIAVE=valore, una per riga. Righe vuote e righe che iniziano con #
+# vengono ignorate. Le chiavi sconosciute e i valori non validi vengono
+# rifiutati e segnalati nel log, non applicati in silenzio.
+#
+# Il file viene letto e validato, mai eseguito: non è uno script e non
+# accetta comandi, sostituzioni o variabili.
+#
+# Precedenza: default < questo file < variabile d'ambiente < flag da riga
+# di comando. Ogni chiave ha un override d'ambiente PASTE_IMAGE_<CHIAVE>.
+
+# --- Immagini ---
+
+# Directory in cui vengono salvate le immagini. Path assoluto.
+#OUTPUT_DIR=/tmp
+
+# Lato lungo massimo in pixel. Le immagini più grandi vengono ridimensionate
+# prima della consegna: uno screenshot 4K costa molti token e supera i limiti
+# di alcune API. 0 disabilita il ridimensionamento.
+#MAX_LONG_SIDE=1568
+
+# Abilita il ridimensionamento automatico (0 o 1).
+#RESIZE_ENABLED=1
+
+# Giorni dopo cui le immagini vengono eliminate automaticamente.
+#CLEANUP_DAYS=7
+
+# --- Consegna del path ---
+
+# Come il path arriva al terminale. Vuoto: scelto automaticamente in base
+# alla sessione e al desktop in uso.
+# Valori: xdotool (X11), wtype (Wayland wlroots), ydotool (Wayland, richiede
+# un daemon con accesso a /dev/uinput), clipboard (nessuna simulazione di
+# tastiera: il path finisce negli appunti e lo incolli tu).
+#TYPING_BACKEND=
+
+# Template di formattazione del path. Deve contenere esattamente un %s, che
+# viene sostituito dal path. Vuoto: il formato viene dedotto dal programma in
+# primo piano nel terminale.
+# Esempi: /add %s per Aider, @%s per Gemini CLI, %s per il path nudo.
+# Per motivi di sicurezza il valore accetta solo caratteri innocui: viene
+# digitato nel terminale a ogni invocazione, quindi un template contenente
+# newline o metacaratteri di shell verrebbe eseguito.
+#FORMAT_TEMPLATE=
+
+# Pausa in secondi prima della digitazione, per dare tempo al focus di
+# stabilizzarsi. Da aumentare se il path finisce troncato.
+#TYPING_DELAY=0.1
+
+# --- Sorgenti ---
+
+# Se gli appunti contengono il riferimento a un file già su disco (copiato
+# dal file manager), usa quel path invece di duplicare il file. 0 per
+# salvare comunque una copia.
+#PREFER_EXISTING_FILE=1
+
+# Numero di voci conservate nello storico per paste-image --last.
+#HISTORY_SIZE=50
+
+# --- Notifiche e log ---
+
+# Durata delle notifiche desktop in millisecondi.
+#NOTIFY_TIMEOUT=3000
+
+# Righe oltre cui il file di log viene ruotato.
+#MAX_LOG_LINES=500

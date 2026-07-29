@@ -111,6 +111,10 @@ echo "Dipendenze: OK"
 
 # --- 2. Copia script in ~/.local/bin ---
 
+# La migrazione legge lo script v1 ancora installato: va fatta PRIMA di
+# sovrascriverlo, altrimenti i valori personalizzati sono già persi.
+bash "$SCRIPT_DIR/scripts/migrate-config.sh" "$INSTALL_DIR/$SCRIPT_NAME"
+
 mkdir -p "$INSTALL_DIR"
 cp "$DIST_SCRIPT" "$INSTALL_DIR/$SCRIPT_NAME"
 chmod +x "$INSTALL_DIR/$SCRIPT_NAME"
@@ -237,47 +241,7 @@ fi
 
 # --- 5. Verifica gsd-media-keys (gestisce gli shortcut custom) ---
 
-echo ""
-echo "--- Verifica servizio shortcut GNOME ---"
-
-if pgrep -x gsd-media-keys &>/dev/null; then
-    echo "gsd-media-keys: OK (in esecuzione)"
-else
-    echo "gsd-media-keys non è in esecuzione. Tentativo di avvio..."
-    if systemctl --user start org.gnome.SettingsDaemon.MediaKeys.target 2>/dev/null; then
-        echo "gsd-media-keys: avviato tramite systemd"
-    else
-        # Cerca il binario dinamicamente (il path varia tra distro)
-        GSD_BIN=""
-        if command -v gsd-media-keys &>/dev/null; then
-            GSD_BIN="$(command -v gsd-media-keys)"
-        else
-            for candidate in \
-                /usr/libexec/gsd-media-keys \
-                /usr/lib/gnome-settings-daemon/gsd-media-keys \
-                /usr/lib/gsd-media-keys; do
-                if [ -x "$candidate" ]; then
-                    GSD_BIN="$candidate"
-                    break
-                fi
-            done
-        fi
-
-        if [ -n "$GSD_BIN" ]; then
-            "$GSD_BIN" &>/dev/null &
-            sleep 1
-            if pgrep -x gsd-media-keys &>/dev/null; then
-                echo "gsd-media-keys: avviato manualmente ($GSD_BIN)"
-            else
-                echo "ATTENZIONE: impossibile avviare gsd-media-keys."
-                echo "Lo shortcut potrebbe non funzionare. Prova a riavviare la sessione GNOME."
-            fi
-        else
-            echo "ATTENZIONE: gsd-media-keys non trovato nel sistema."
-            echo "Lo shortcut potrebbe non funzionare. Prova a riavviare la sessione GNOME."
-        fi
-    fi
-fi
+bash "$SCRIPT_DIR/scripts/check-shortcut-service.sh"
 
 # --- 6. Riepilogo ---
 

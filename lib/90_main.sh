@@ -6,6 +6,18 @@
 # definiscono soltanto funzioni. Le decisioni di uscita vivono qui.
 #
 
+# --- Configurazione ---
+
+# Il parser accumula le anomalie perché gira prima che il log esista.
+# Vanno riversate appena possibile: una chiave scartata in silenzio è
+# indistinguibile da una applicata.
+flush_config_warnings() {
+    local warning
+    for warning in ${CONFIG_WARNINGS+"${CONFIG_WARNINGS[@]}"}; do
+        log "config: $warning"
+    done
+}
+
 # --- Verifica dipendenze ---
 
 check_dependency() {
@@ -20,7 +32,8 @@ check_dependency() {
 # --- Directory di output ---
 
 resolve_output_dir() {
-    local dir="${PASTE_IMAGE_OUTPUT_DIR:-/tmp}"
+    # shellcheck disable=SC2153 # Assegnata da config_defaults in 15_config.sh
+    local dir="$OUTPUT_DIR"
 
     # Fallback se la directory scelta non è scrivibile
     if [ ! -w "$dir" ]; then
@@ -62,7 +75,9 @@ main() {
         exit 0
     fi
 
+    config_init
     store_init
+    flush_config_warnings
 
     check_dependency xclip xclip
     check_dependency xdotool xdotool

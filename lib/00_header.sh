@@ -16,15 +16,8 @@ set -euo pipefail
 
 VERSION="1.0.0"
 
-# --- Configurazione ---
-# Valori di default. In seguito il modulo di configurazione li sovrascrive
-# con quanto letto da ~/.config/paste-image/config, dalle variabili
-# d'ambiente e dai flag della riga di comando, in quest'ordine.
-
-MAX_LOG_LINES=500          # Soglia di rotazione del file di log (in righe)
-NOTIFY_TIMEOUT=3000        # Durata notifiche desktop in millisecondi
-CLEANUP_DAYS=7             # Giorni dopo cui i file temporanei vengono eliminati
-TYPING_DELAY=0.1           # Pausa in secondi prima di xdotool type (stabilità focus)
+# I valori configurabili hanno i loro default in config_defaults(), nel
+# modulo 15_config.sh, insieme al parser e alla validazione.
 
 # I file creati contengono immagini potenzialmente sensibili (screenshot di
 # password manager, dati personali). Non affidarsi all'umask ereditato, che

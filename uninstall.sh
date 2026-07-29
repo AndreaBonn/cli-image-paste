@@ -104,6 +104,26 @@ else
     echo "Directory log non trovata (già rimossa?)"
 fi
 
+# --- 4b. Configurazione utente ---
+# Il config non è stato generato da noi: contiene scelte dell'utente e
+# sopravvive alla disinstallazione per default, così reinstallare le
+# ritrova. Chi vuole rimuovere ogni traccia lo chiede esplicitamente.
+
+CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/paste-image"
+if [ -d "$CONFIG_DIR" ]; then
+    echo ""
+    echo "Configurazione utente trovata: $CONFIG_DIR"
+    read -rp "Vuoi rimuoverla? [s/N] " REMOVE_CONFIG
+    REMOVE_CONFIG=${REMOVE_CONFIG:-N}
+    if [[ "$REMOVE_CONFIG" =~ ^[SsYy]$ ]]; then
+        rm -rf "$CONFIG_DIR"
+        echo "Configurazione rimossa."
+    else
+        echo "Configurazione conservata: $CONFIG_DIR"
+    fi
+    echo ""
+fi
+
 # --- 5. Pulizia file temporanei ---
 
 TMP_FILES=(/tmp/paste_image_*.png)
