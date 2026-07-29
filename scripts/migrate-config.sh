@@ -15,6 +15,23 @@ set -euo pipefail
 INSTALLED_SCRIPT="${1:-$HOME/.local/bin/paste-image}"
 CONFIG_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/paste-image/config"
 
+# I valori arrivano da uno script su disco che potrebbe essere stato
+# alterato: vengono validati con le stesse regole del parser prima di
+# finire nel file di configurazione. Il caricamento successivo li
+# rivaliderebbe comunque, ma scrivere righe sporche nel file dell'utente
+# è comunque da evitare.
+# Il path si risolve con parameter expansion, non con dirname: uno script
+# invocato da un keybinding può ereditare un PATH minimale in cui i binari
+# di coreutils non sono raggiungibili.
+_SELF="${BASH_SOURCE[0]}"
+_SELF_DIR="${_SELF%/*}"
+[ "$_SELF_DIR" = "$_SELF" ] && _SELF_DIR="."
+_MODULES_DIR="$(cd "$_SELF_DIR/../lib" && pwd)"
+# shellcheck source=../lib/05_text.sh
+source "$_MODULES_DIR/05_text.sh"
+# shellcheck source=../lib/15_config.sh
+source "$_MODULES_DIR/15_config.sh"
+
 # Chiavi migrabili e valore di fabbrica della v1
 V1_KEYS=(MAX_LOG_LINES NOTIFY_TIMEOUT CLEANUP_DAYS TYPING_DELAY)
 V1_DEFAULTS=(500 3000 7 0.1)
@@ -41,7 +58,7 @@ read_v1_value() {
 }
 
 collect_customizations() {
-    local script="$1" i key value default
+    local script="$1" i key value default type
     CUSTOMIZED=()
 
     for i in "${!V1_KEYS[@]}"; do
@@ -50,6 +67,13 @@ collect_customizations() {
         value=$(read_v1_value "$script" "$key")
         [ -z "$value" ] && continue
         [ "$value" = "$default" ] && continue
+
+        type=$(_config_type_of "$key") || continue
+        if ! _config_validate "$type" "$value"; then
+            echo "  $key: valore non valido nello script v1, non migrato" >&2
+            continue
+        fi
+
         CUSTOMIZED+=("$key=$value")
     done
 }

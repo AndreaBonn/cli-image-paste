@@ -12,6 +12,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=test_framework.sh
 source "$SCRIPT_DIR/test_framework.sh"
 
+# shellcheck source=../lib/05_text.sh
+source "$(cd "$SCRIPT_DIR/.." && pwd)/lib/05_text.sh"
 # shellcheck source=../lib/15_config.sh
 source "$(cd "$SCRIPT_DIR/.." && pwd)/lib/15_config.sh"
 

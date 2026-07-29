@@ -10,7 +10,11 @@
 
 set -euo pipefail
 
-PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# Risoluzione del path senza dirname: un PATH minimale non ha coreutils.
+_SELF="${BASH_SOURCE[0]}"
+_SELF_DIR="${_SELF%/*}"
+[ "$_SELF_DIR" = "$_SELF" ] && _SELF_DIR="."
+PROJECT_DIR="$(cd "$_SELF_DIR/.." && pwd)"
 LIB_DIR="$PROJECT_DIR/lib"
 DIST_DIR="$PROJECT_DIR/dist"
 OUTPUT="$DIST_DIR/paste-image"

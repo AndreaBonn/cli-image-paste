@@ -65,7 +65,7 @@ _config_valid_decimal() {
 }
 
 _config_valid_path() {
-    [[ "$1" == /* ]] && ! _config_has_control_chars "$1"
+    [[ "$1" == /* ]] && ! text_has_unsafe_chars "$1"
 }
 
 _config_valid_bool() {
@@ -79,19 +79,6 @@ _config_valid_backend() {
     esac
 }
 
-# Caratteri di controllo C0/C1 e override bidirezionali Unicode.
-# Il primo gruppo rende un valore eseguibile una volta digitato in un
-# terminale, il secondo maschera visivamente il contenuto reale.
-_config_has_control_chars() {
-    local value="$1"
-    [[ "$value" == *[[:cntrl:]]* ]] && return 0
-    case "$value" in
-        *$'‪'*|*$'‫'*|*$'‬'*|*$'‭'*|*$'‮'*) return 0 ;;
-        *$'⁦'*|*$'⁧'*|*$'⁨'*|*$'⁩'*) return 0 ;;
-    esac
-    return 1
-}
-
 # Il template finisce digitato nel terminale a ogni invocazione, per sempre:
 # un valore ostile qui persiste, a differenza di un path che arriva una volta
 # sola dagli appunti. La validazione è a whitelist, non a blacklist.
@@ -101,7 +88,7 @@ _config_valid_template() {
 
     [ -z "$value" ] && return 0
     [ "${#value}" -gt 200 ] && return 1
-    _config_has_control_chars "$value" && return 1
+    text_has_unsafe_chars "$value" && return 1
 
     # Esattamente un segnaposto, e nessun altro '%' che possa essere
     # interpretato come specificatore di formato
@@ -171,7 +158,13 @@ _config_parse_line() {
     [[ "$line" == \#* ]] && return 0
 
     if [[ "$line" != *=* ]]; then
-        CONFIG_WARNINGS+=("riga senza '=' ignorata: $line")
+        # La riga finisce nel log e nel testo di una notifica. Non viene
+        # mai eseguita, ma sequenze di escape corromperebbero il terminale
+        # di chi legge il log, e gli override bidirezionali renderebbero
+        # ingannevole il messaggio.
+        local shown="$line"
+        text_has_unsafe_chars "$line" && shown="(contiene caratteri non stampabili)"
+        CONFIG_WARNINGS+=("riga senza '=' ignorata: $shown")
         return 0
     fi
 

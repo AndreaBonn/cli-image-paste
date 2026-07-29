@@ -26,15 +26,7 @@ delivery_path_is_safe() {
     [ -n "$path" ] || return 1
     [[ "$path" == /* ]] || return 1
 
-    case "$path" in
-        *[[:cntrl:]]*) return 1 ;;
-    esac
-
-    case "$path" in
-        *$'‪'*|*$'‫'*|*$'‬'*|*$'‭'*|*$'‮'*) return 1 ;;
-        *$'⁦'*|*$'⁧'*|*$'⁨'*|*$'⁩'*) return 1 ;;
-        *$''*|*$' '*|*$' '*) return 1 ;;
-    esac
+    text_has_unsafe_chars "$path" && return 1
 
     return 0
 }

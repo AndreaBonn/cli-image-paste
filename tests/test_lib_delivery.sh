@@ -14,6 +14,8 @@ source "$SCRIPT_DIR/test_framework.sh"
 VERSION="test"
 TYPING_DELAY=0
 _LIB="$(cd "$SCRIPT_DIR/.." && pwd)/lib"
+# shellcheck source=../lib/05_text.sh
+source "$_LIB/05_text.sh"
 # shellcheck source=../lib/10_env_detect.sh
 source "$_LIB/10_env_detect.sh"
 # shellcheck source=../lib/30_delivery.sh
