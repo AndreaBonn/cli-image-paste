@@ -8,10 +8,14 @@ Legenda requisito: `F<n>` = feature del backlog originale, `S<n>` = mitigazione 
 
 | Fase | Stato | Dettaglio |
 |---|---|---|
-| 0 | **completa** | 0.1-0.11 fatti. L'aggiornamento di `docs/ARCHITECTURE.*`, inizialmente in 0.11, è spostato a 5.3 (vedi nota sotto). Gate `code-reviewer` superato, rilievi applicati. |
-| 1 | **in corso** | 1.1-1.6 fatti: `lib/10_env_detect.sh`, `lib/30_delivery.sh`, quattro backend, validazione del path, 32 test L1/L2. Manca **1.7** (sezione Wayland nei README bilingui con avviso ydotool). |
-| 2 | **avviata** | `lib/20_clipboard.sh` scritto: astrazione xclip/wl-paste, scelta del target, parsing uri-list con decode e validazione. **Non ancora integrato in `90_main.sh` e privo di test**: 2.1-2.3 sono da completare, 2.4-2.6 da iniziare. |
-| 3, 4, 5 | non iniziate | — |
+| 0 | **completa** | 0.1-0.11 fatti. Gate `code-reviewer` e `security-reviewer` superati, rilievi applicati. L'aggiornamento di `docs/ARCHITECTURE.*` è spostato a 5.3 (nota sotto). |
+| 1 | **completa** | `lib/10_env_detect.sh`, `lib/30_delivery.sh`, quattro backend, validazione del path, sezione Wayland nei README bilingui con avviso ydotool. |
+| 2 | **completa** | `lib/20_clipboard.sh` e `lib/40_transform.sh` integrati in `90_main.sh`: backend appunti xclip/wl-paste, priorità dei target, file dal file manager senza duplicazione, conversione WebP/GIF/TIFF/BMP/AVIF/SVG con policy ImageMagick dedicata. Docs aggiornate. |
+| 3 | non iniziata | Shortcut multi-desktop: KDE, window manager, dispatcher. |
+| 4 | non iniziata | Pipeline P1: resize, formato adattivo, ring buffer, screenshot, annotazione. |
+| 5 | non iniziata | Distribuzione, `docs/ARCHITECTURE.*`, `MANUAL_TESTING.md`, naming. |
+
+Suite: 12 file di test, 145 casi, ShellCheck pulito su 32 file, gate dimensionale e di purezza dei moduli attivi.
 
 Bloccanti aperti: **B1** (`wl-copy` sopravvive alla morte dello script lanciato da keybinding?) resta non verificato, servono `wl-clipboard` e `sway` installati. **B2** risolto: `xdotool` sintetizza `Return` per un CR e `Linefeed` per un LF, quindi il rischio S2 è confermato reale, non teorico. Dettagli in `doc_progetto/spike-wayland.md`.
 

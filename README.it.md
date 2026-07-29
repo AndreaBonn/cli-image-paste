@@ -138,28 +138,68 @@ sequenceDiagram
 
 ## Funzionalità
 
-- Scorciatoia da tastiera globale GNOME (configurabile)
-- Rilevamento automatico del tipo di immagine (PNG/JPEG)
-- Creazione sicura e atomica dei file tramite `mktemp` con permessi `0600`
-- Gestione del focus della finestra (ricorda quale terminale era attivo)
-- Notifiche desktop per successi ed errori (con fallback su zenity)
+- Funziona sia su **X11 sia su Wayland**, con rilevamento del display server a ogni avvio
+- Scorciatoia da tastiera globale (configurabile)
+- Legge PNG e JPEG direttamente, converte WebP, GIF, TIFF, BMP, AVIF e SVG
+- Quando copi un **file** immagine dal file manager usa il percorso esistente invece di duplicarlo
+- Backend di consegna scelto in base alla sessione: `xdotool`, `wtype`, `ydotool` o gli appunti
+- Configurazione utente in `~/.config/paste-image/config`, che sopravvive agli aggiornamenti
+- Creazione atomica e sicura dei file tramite `mktemp` con permessi `0600`
+- Percorsi validati prima della digitazione: caratteri di controllo e override bidirezionali vengono rifiutati
+- ImageMagick gira con una policy restrittiva dedicata e limiti di risorsa
+- Notifiche desktop per successo ed errori (con fallback su zenity)
 - Pulizia automatica dei file temporanei più vecchi di 7 giorni
-- Rotazione dei log con scritture sicure contro race condition tramite `flock`
-- Installazione dipendenze cross-distro (apt/dnf/pacman)
-- Supporto flag versione (`--version`, `-v`)
-- Suite di test completa (50+ casi di test)
-- Codice validato con ShellCheck
+- Rotazione dei log con scritture protette da `flock`
+- Installazione delle dipendenze multi-distro (apt/dnf/pacman)
+- Suite di 145 test, ShellCheck pulito, gate eseguibili su dimensione e purezza dei moduli
+
 
 ## Requisiti di Sistema
 
-| Requisito                  | Dettaglio                                                      |
-| -------------------------- | -------------------------------------------------------------- |
-| **Sistema operativo**      | Linux (Ubuntu, Fedora, Arch o altra distro basata su GNOME)    |
-| **Display server**         | X11 (Wayland non è supportato)                                 |
-| **Ambiente desktop**       | GNOME (per la configurazione automatica della scorciatoia)     |
-| **Shell**                  | Bash 4.0+                                                      |
+| Requisito                | Dettaglio                                                    |
+| ------------------------ | ------------------------------------------------------------ |
+| **Sistema operativo**    | Linux                                                        |
+| **Display server**       | X11 oppure Wayland                                           |
+| **Ambiente desktop**     | GNOME per la configurazione automatica, gli altri a mano     |
+| **Shell**                | Bash 4.4+                                                    |
 
-**Formati immagine supportati:** PNG, JPEG.
+**Formati letti direttamente:** PNG, JPEG.
+**Convertiti se ImageMagick è installato:** WebP, GIF, TIFF, BMP, AVIF.
+**Convertito se rsvg-convert è installato:** SVG.
+
+## Supporto Wayland
+
+Leggere gli appunti funziona ovunque. Digitare il percorso no: dipende da cosa
+implementa il compositore, e non esiste un modo per chiederglielo in anticipo.
+
+| Sessione | Compositore           | Come arriva il percorso                        |
+| -------- | --------------------- | ---------------------------------------------- |
+| X11      | qualunque             | digitato tramite `xdotool`                     |
+| Wayland  | sway, Hyprland, river | digitato tramite `wtype`                       |
+| Wayland  | GNOME, Unity          | **copiato negli appunti**, premi tu Ctrl+V     |
+| Wayland  | KDE, altri            | `wtype` se funziona, altrimenti gli appunti    |
+
+Su GNOME Wayland gli appunti sono il comportamento predefinito, non un ripiego
+dopo un fallimento. Mutter non implementa il protocollo
+`virtual-keyboard-unstable-v1` richiesto da `wtype`, e un ripiego si
+scoprirebbe solo fallendo dopo che il file è già stato scritto: dal punto di
+vista di chi preme la scorciatoia sembrerebbe che non sia successo nulla. Una
+notifica avvisa che il percorso è pronto da incollare.
+
+### A proposito di ydotool
+
+`ydotool` sa digitare su qualunque compositore, quindi è disponibile impostando
+`TYPING_BACKEND=ydotool` nel file di configurazione. Non viene mai scelto
+automaticamente, ed è una scelta deliberata.
+
+`ydotool` richiede un daemon con accesso a `/dev/uinput`. Chi riesce a
+raggiungere quel daemon può iniettare tasti in **qualunque** applicazione della
+sessione, compresi i prompt di sudo e le finestre dei gestori di password.
+Questo annulla l'isolamento dell'input, che è il principale miglioramento di
+sicurezza di Wayland rispetto a X11. Se lo attivi, verifica che il suo socket
+sia accessibile al solo proprietario, e preferisci un daemon per utente
+all'aggiunta del tuo account a un gruppo di sistema.
+
 
 ## Installazione
 
@@ -181,14 +221,19 @@ Ti verrà chiesto di scegliere una scorciatoia personalizzata o accettare quella
 
 ### Dipendenze
 
-| Dipendenza    | Scopo                                    | Pacchetto (apt) |
-| ------------- | ---------------------------------------- | ---------------- |
-| `xclip`       | Lettura immagini dalla clipboard X11     | `xclip`          |
-| `xdotool`     | Simulazione input tastiera nel terminale | `xdotool`        |
-| `notify-send` | Notifiche desktop                        | `libnotify-bin`  |
-| `python3`     | Manipolazione configurazione JSON        | `python3`        |
+| Dipendenza      | Scopo                                       | Necessaria   |
+| --------------- | ------------------------------------------- | ------------ |
+| `xclip`         | Legge gli appunti su X11                    | su X11       |
+| `wl-clipboard`  | Legge gli appunti su Wayland                | su Wayland   |
+| `xdotool`       | Digita il percorso su X11                   | consigliata  |
+| `wtype`         | Digita il percorso sui compositori wlroots  | opzionale    |
+| `imagemagick`   | Converte WebP, GIF, TIFF, BMP, AVIF         | opzionale    |
+| `librsvg2-bin`  | Converte gli SVG (`rsvg-convert`)           | opzionale    |
+| `notify-send`   | Notifiche desktop                           | consigliata  |
+| `python3`       | Manipolazione config JSON in installazione  | solo GNOME   |
 
-Tutte le dipendenze vengono installate automaticamente durante il setup. Se preferisci l'installazione manuale:
+Le dipendenze opzionali degradano con un messaggio che nomina il pacchetto da
+installare, non bloccano mai lo strumento.
 
 ```bash
 # Ubuntu/Debian
@@ -237,14 +282,33 @@ Puoi anche cambiarla da **Impostazioni > Tastiera > Scorciatoie > Scorciatoie pe
 
 ### Configurazione dello script
 
-Le seguenti costanti possono essere modificate direttamente in `~/.local/bin/paste-image`:
+Le impostazioni vivono in `~/.config/paste-image/config` (oppure
+`$XDG_CONFIG_HOME/paste-image/config`). Il file sopravvive agli aggiornamenti:
+nella versione 1 questi valori si modificavano dentro lo script installato,
+quindi ogni reinstallazione li cancellava. `install.sh` li migra automaticamente
+la prima volta.
 
-| Costante         | Default | Descrizione                                      |
-| ---------------- | ------- | ------------------------------------------------ |
-| `MAX_LOG_LINES`  | `500`   | Soglia rotazione log (righe)                     |
-| `NOTIFY_TIMEOUT` | `3000`  | Durata notifica (millisecondi)                   |
-| `CLEANUP_DAYS`   | `7`     | Eliminazione automatica file temporanei (giorni) |
-| `TYPING_DELAY`   | `0.1`   | Ritardo prima della digitazione (secondi)        |
+Un file di riferimento commentato è incluso come `config.example`. Le chiavi più
+utili:
+
+| Chiave                 | Default | Descrizione                                                       |
+| ---------------------- | ------- | ----------------------------------------------------------------- |
+| `OUTPUT_DIR`           | `/tmp`  | Dove vengono salvate le immagini                                   |
+| `TYPING_BACKEND`       | auto    | `xdotool`, `wtype`, `ydotool` oppure `clipboard`                   |
+| `FORMAT_TEMPLATE`      | vuoto   | Template di output, esattamente un `%s`, es. `/add %s` per Aider   |
+| `PREFER_EXISTING_FILE` | `1`     | Usa il percorso di un file copiato invece di duplicarlo            |
+| `MAX_LONG_SIDE`        | `1568`  | Limite del lato lungo in pixel (il ridimensionamento arriva dopo)  |
+| `CLEANUP_DAYS`         | `7`     | Elimina i file temporanei più vecchi di N giorni                   |
+| `TYPING_DELAY`         | `0.1`   | Pausa prima di digitare il percorso (secondi)                      |
+
+Le chiavi sconosciute e i valori non validi vengono rifiutati e registrati nel
+log, mai applicati in silenzio. Il file viene letto e analizzato, mai eseguito:
+un file di configurazione eseguito a ogni pressione della scorciatoia sarebbe
+esecuzione di codice arbitrario.
+
+Ogni chiave accetta anche un override d'ambiente `PASTE_IMAGE_<CHIAVE>`, che
+vince sul file.
+
 
 ### File di log
 
@@ -309,24 +373,36 @@ Se il problema persiste:
 
 ```
 cli-image-paste/
-├── paste-image          # Script principale
-├── install.sh           # Script di installazione
-├── uninstall.sh         # Script di disinstallazione
-├── README.md            # Documentazione (inglese)
-├── README.it.md         # Documentazione (italiano)
-├── SECURITY.md          # Politica di sicurezza (inglese)
-├── SECURITY.it.md       # Politica di sicurezza (italiano)
-├── LICENSE              # Licenza MIT
-├── .gitignore           # Regole di esclusione Git
-├── .shellcheckrc        # Configurazione linter ShellCheck
-├── tests/               # Suite di test
-│   ├── run_tests.sh         # Runner dei test
-│   ├── test_framework.sh    # Framework di test personalizzato
-│   ├── test_paste_image.sh  # Test dello script principale
-│   ├── test_install.sh      # Test dell'installazione
-│   └── test_uninstall.sh    # Test della disinstallazione
-└── docs/                # Documentazione
+├── lib/                 # Sorgenti modulari, concatenati a build time
+│   ├── 00_header.sh
+│   ├── 05_text.sh
+│   ├── 10_env_detect.sh
+│   ├── 15_config.sh
+│   ├── 20_clipboard.sh
+│   ├── 30_delivery.sh
+│   ├── 40_transform.sh
+│   ├── 50_store.sh
+│   └── 90_main.sh
+├── scripts/
+│   ├── build.sh              # lib/*.sh -> dist/paste-image
+│   ├── migrate-config.sh
+│   └── check-shortcut-service.sh
+├── dist/paste-image     # Artefatto generato, non versionato
+├── install.sh
+├── uninstall.sh
+├── config.example
+├── CLAUDE.md
+├── tests/
+│   ├── run_tests.sh
+│   ├── framework/
+│   └── test_*.sh
+└── docs/
 ```
+
+L'eseguibile è generato, non scritto a mano: i sorgenti stanno in `lib/` e
+`scripts/build.sh` li concatena in ordine numerico. Si modifica un modulo e si
+ricostruisce. L'installazione resta a file singolo, quindi la disinstallazione
+non lascia residui.
 
 ## Eseguire i Test
 
@@ -334,7 +410,7 @@ cli-image-paste/
 bash tests/run_tests.sh
 ```
 
-La suite di test include 50+ casi di test che coprono:
+La suite di test include 145 casi di test che coprono:
 
 - Funzionalità script principale (18 test): verifica dipendenze, gestione clipboard, rilevamento MIME type, sicurezza mktemp, pulizia file, notifiche, flag versione
 - Flusso installazione (12 test): installazione dipendenze, configurazione PATH, manipolazione array gsettings, rilevamento conflitti shortcut, idempotenza
@@ -352,10 +428,10 @@ Tutti gli script passano la validazione ShellCheck senza warning.
 
 ## Limitazioni
 
-- **Solo X11** — non compatibile con Wayland (richiederebbe `wl-paste` + `ydotool`)
-- **Solo GNOME** — la configurazione automatica della scorciatoia usa `gsettings`
-- **Il terminale deve avere il focus** quando si preme la scorciatoia
-- Solo immagini **PNG** e **JPEG** sono supportate
+- **Su GNOME Wayland la digitazione non è ottenibile**: il percorso finisce negli appunti, vedi la sezione Wayland qui sopra
+- **La configurazione automatica della scorciatoia è solo per GNOME**: sugli altri desktop va aggiunta a mano
+- **Il terminale deve avere il focus** quando premi la scorciatoia
+- I formati diversi da PNG e JPEG richiedono ImageMagick, o rsvg-convert per gli SVG
 
 ## Contribuire
 

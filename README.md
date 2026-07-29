@@ -138,28 +138,67 @@ sequenceDiagram
 
 ## Features
 
-- Global GNOME keyboard shortcut (configurable)
-- Automatic image type detection (PNG/JPEG)
+- Works on both **X11 and Wayland**, with the display server detected at runtime
+- Global keyboard shortcut (configurable)
+- Reads PNG and JPEG directly, converts WebP, GIF, TIFF, BMP, AVIF and SVG
+- Uses the existing path when you copy an image **file** from a file manager, instead of duplicating it
+- Delivery backend chosen automatically per session: `xdotool`, `wtype`, `ydotool` or the clipboard
+- User configuration in `~/.config/paste-image/config`, preserved across upgrades
 - Secure atomic file creation via `mktemp` with `0600` permissions
-- Window focus management (remembers which terminal had focus)
+- Paths validated before typing: control characters and bidirectional overrides are refused
+- ImageMagick runs under a dedicated restrictive policy with resource limits
 - Desktop notifications for success and errors (with zenity fallback)
 - Automatic cleanup of temporary files older than 7 days
 - Log rotation with race-condition-safe writes via `flock`
 - Cross-distro dependency installation (apt/dnf/pacman)
-- Version flag support (`--version`, `-v`)
-- Comprehensive test suite (50+ test cases)
-- ShellCheck validated code
+- Test suite of 145 cases, ShellCheck clean, executable size and purity gates
+
 
 ## System Requirements
 
-| Requirement             | Detail                                                    |
-| ----------------------- | --------------------------------------------------------- |
-| **OS**                  | Linux (Ubuntu, Fedora, Arch, or other GNOME-based distro) |
-| **Display server**      | X11 (Wayland is not supported)                            |
-| **Desktop environment** | GNOME (for automatic shortcut configuration)              |
-| **Shell**               | Bash 4.0+                                                 |
+| Requirement             | Detail                                                     |
+| ----------------------- | ---------------------------------------------------------- |
+| **OS**                  | Linux                                                      |
+| **Display server**      | X11 or Wayland                                             |
+| **Desktop environment** | GNOME for automatic shortcut setup, others work manually   |
+| **Shell**               | Bash 4.4+                                                  |
 
-**Supported image formats:** PNG, JPEG.
+**Image formats read directly:** PNG, JPEG.
+**Converted when ImageMagick is present:** WebP, GIF, TIFF, BMP, AVIF.
+**Converted when rsvg-convert is present:** SVG.
+
+## Wayland support
+
+Reading the clipboard works everywhere. Typing the path does not: it depends on
+what the compositor implements, and there is no way to ask a compositor in
+advance.
+
+| Session | Compositor            | How the path is delivered                     |
+| ------- | --------------------- | --------------------------------------------- |
+| X11     | any                   | typed via `xdotool`                           |
+| Wayland | sway, Hyprland, river | typed via `wtype`                             |
+| Wayland | GNOME, Unity          | **copied to the clipboard**, you press Ctrl+V |
+| Wayland | KDE, others           | `wtype` if it works, clipboard otherwise      |
+
+On GNOME Wayland the clipboard is the default, not a fallback after a failure.
+Mutter does not implement the `virtual-keyboard-unstable-v1` protocol that
+`wtype` needs, and a fallback would only be discovered by failing after the file
+had already been written, which reads as nothing happening at all. You get a
+notification telling you the path is ready to paste.
+
+### About ydotool
+
+`ydotool` can type on any compositor, so it is available by setting
+`TYPING_BACKEND=ydotool` in the config file. It is never selected
+automatically, and that is deliberate.
+
+`ydotool` needs a daemon with access to `/dev/uinput`. Anyone able to reach that
+daemon can synthesise keystrokes into **any** application in your session,
+including sudo prompts and password manager windows. That defeats the input
+isolation which is Wayland's main security improvement over X11. If you enable
+it, check that its socket is owner-only, and prefer a per-user daemon over
+adding your account to a system-wide input group.
+
 
 ## Installation
 
@@ -181,14 +220,19 @@ You'll be prompted to choose a custom shortcut or accept the default.
 
 ### Dependencies
 
-| Dependency    | Purpose                             | Package (apt)   |
-| ------------- | ----------------------------------- | --------------- |
-| `xclip`       | Read images from X11 clipboard      | `xclip`         |
-| `xdotool`     | Simulate keyboard input in terminal | `xdotool`       |
-| `notify-send` | Desktop notifications               | `libnotify-bin` |
-| `python3`     | JSON config manipulation            | `python3`       |
+| Dependency      | Purpose                                  | Required    |
+| --------------- | ---------------------------------------- | ----------- |
+| `xclip`         | Read the clipboard on X11                | on X11      |
+| `wl-clipboard`  | Read the clipboard on Wayland            | on Wayland  |
+| `xdotool`       | Type the path on X11                     | recommended |
+| `wtype`         | Type the path on wlroots compositors     | optional    |
+| `imagemagick`   | Convert WebP, GIF, TIFF, BMP, AVIF       | optional    |
+| `librsvg2-bin`  | Convert SVG (`rsvg-convert`)             | optional    |
+| `notify-send`   | Desktop notifications                    | recommended |
+| `python3`       | JSON config manipulation during install  | GNOME only  |
 
-All dependencies are installed automatically during setup. If you prefer manual installation:
+Optional dependencies degrade with a message naming the package to install,
+they never block the tool.
 
 ```bash
 # Ubuntu/Debian
@@ -237,14 +281,30 @@ You can also change it from **Settings > Keyboard > Shortcuts > Custom Shortcuts
 
 ### Script configuration
 
-The following constants can be edited directly in `~/.local/bin/paste-image`:
+Settings live in `~/.config/paste-image/config` (or `$XDG_CONFIG_HOME/paste-image/config`).
+The file survives upgrades: in version 1 these values were edited inside the
+installed script, so every reinstall wiped them. `install.sh` migrates them for
+you the first time.
 
-| Constant         | Default | Description                              |
-| ---------------- | ------- | ---------------------------------------- |
-| `MAX_LOG_LINES`  | `500`   | Log rotation threshold (lines)           |
-| `NOTIFY_TIMEOUT` | `3000`  | Notification duration (milliseconds)     |
-| `CLEANUP_DAYS`   | `7`     | Auto-delete temp files older than N days |
-| `TYPING_DELAY`   | `0.1`   | Delay before typing path (seconds)       |
+A commented reference file ships as `config.example`. The most useful keys:
+
+| Key                    | Default | Description                                                    |
+| ---------------------- | ------- | -------------------------------------------------------------- |
+| `OUTPUT_DIR`           | `/tmp`  | Where images are saved                                          |
+| `TYPING_BACKEND`       | auto    | `xdotool`, `wtype`, `ydotool` or `clipboard`                    |
+| `FORMAT_TEMPLATE`      | empty   | Output template, exactly one `%s`, e.g. `/add %s` for Aider     |
+| `PREFER_EXISTING_FILE` | `1`     | Use the path of a copied file instead of duplicating it         |
+| `MAX_LONG_SIDE`        | `1568`  | Long-side limit in pixels (resizing lands in a later release)   |
+| `CLEANUP_DAYS`         | `7`     | Auto-delete temp files older than N days                        |
+| `TYPING_DELAY`         | `0.1`   | Delay before typing the path (seconds)                          |
+
+Unknown keys and invalid values are refused and logged, never applied silently.
+The file is parsed, never sourced: a config file that gets executed on every
+shortcut press would be arbitrary code execution.
+
+Every key also accepts an environment override named `PASTE_IMAGE_<KEY>`, which
+wins over the file.
+
 
 ### Log files
 
@@ -309,24 +369,36 @@ If the problem persists:
 
 ```
 cli-image-paste/
-├── paste-image          # Main script
-├── install.sh           # Installation script
-├── uninstall.sh         # Uninstallation script
-├── README.md            # Documentation (English)
-├── README.it.md         # Documentation (Italian)
-├── SECURITY.md          # Security policy (English)
-├── SECURITY.it.md       # Security policy (Italian)
-├── LICENSE              # MIT License
-├── .gitignore           # Git exclusion rules
-├── .shellcheckrc        # ShellCheck linter configuration
-├── tests/               # Test suite
-│   ├── run_tests.sh         # Test runner
-│   ├── test_framework.sh    # Custom test framework
-│   ├── test_paste_image.sh  # Main script tests
-│   ├── test_install.sh      # Installation tests
-│   └── test_uninstall.sh    # Uninstallation tests
-└── docs/                # Documentation
+├── lib/                 # Sorgenti modulari, concatenati a build time
+│   ├── 00_header.sh
+│   ├── 05_text.sh
+│   ├── 10_env_detect.sh
+│   ├── 15_config.sh
+│   ├── 20_clipboard.sh
+│   ├── 30_delivery.sh
+│   ├── 40_transform.sh
+│   ├── 50_store.sh
+│   └── 90_main.sh
+├── scripts/
+│   ├── build.sh              # lib/*.sh -> dist/paste-image
+│   ├── migrate-config.sh
+│   └── check-shortcut-service.sh
+├── dist/paste-image     # Artefatto generato, non versionato
+├── install.sh
+├── uninstall.sh
+├── config.example
+├── CLAUDE.md
+├── tests/
+│   ├── run_tests.sh
+│   ├── framework/
+│   └── test_*.sh
+└── docs/
 ```
+
+The executable is generated, not written by hand: sources live in `lib/` and
+`scripts/build.sh` concatenates them in numeric order. Edit a module, then
+rebuild. Installation stays a single file, so uninstalling leaves nothing
+behind.
 
 ## Running Tests
 
@@ -334,7 +406,7 @@ cli-image-paste/
 bash tests/run_tests.sh
 ```
 
-The test suite includes 50+ test cases covering:
+The test suite includes 145 test cases covering:
 
 - Main script functionality (18 tests): dependency checks, clipboard handling, MIME type detection, mktemp security, file cleanup, notifications, version flag
 - Installation flow (12 tests): dependency installation, PATH configuration, gsettings array manipulation, shortcut conflict detection, idempotency
@@ -352,10 +424,10 @@ All scripts pass ShellCheck validation with zero warnings.
 
 ## Limitations
 
-- **X11 only** — not compatible with Wayland (would require `wl-paste` + `ydotool`)
-- **GNOME only** — automatic shortcut configuration uses `gsettings`
-- **Terminal must have focus** when the shortcut is pressed
-- Only **PNG** and **JPEG** images are supported
+- **Typing is not possible on GNOME Wayland**: the path goes to the clipboard instead, see the Wayland section above
+- **Automatic shortcut setup is GNOME only**: on other desktops you add the shortcut yourself
+- **The terminal must have focus** when the shortcut is pressed
+- Formats other than PNG and JPEG need ImageMagick, or rsvg-convert for SVG
 
 ## Contributing
 
