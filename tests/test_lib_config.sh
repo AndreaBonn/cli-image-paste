@@ -148,7 +148,8 @@ test_decimal_accepted() {
 
 test_template_valid_forms_accepted() {
     local template
-    for template in "/add %s" "@%s" "%s" "read_file %s"; do
+    for template in "/add %s" "@%s" "%s" "read_file %s" \
+                    "mytool --file %s" "cmd -a -b %s"; do
         config_defaults
         if ! _config_valid_template "$template"; then
             _test_fail "template legittimo rifiutato: '$template'"

@@ -23,6 +23,26 @@ if [ ! -d "$LIB_DIR" ]; then
     exit 1
 fi
 
+# Ogni modulo deve avere un prefisso di due cifre: è l'ordine di
+# concatenazione. Un file fuori pattern verrebbe escluso in silenzio, e un
+# modulo mancante dall'artefatto è molto più difficile da diagnosticare di
+# un errore di build.
+UNEXPECTED=()
+for candidate in "$LIB_DIR"/*.sh; do
+    [ -f "$candidate" ] || continue
+    case "$(basename "$candidate")" in
+        [0-9][0-9]_*.sh) ;;
+        *) UNEXPECTED+=("$(basename "$candidate")") ;;
+    esac
+done
+
+if [ ${#UNEXPECTED[@]} -gt 0 ]; then
+    echo "ERRORE: moduli con nome fuori dal pattern NN_nome.sh:" >&2
+    printf '  %s\n' "${UNEXPECTED[@]}" >&2
+    echo "Sarebbero esclusi dall'artefatto senza alcun segnale." >&2
+    exit 1
+fi
+
 MODULES=()
 while IFS= read -r module; do
     MODULES+=("$module")
@@ -51,6 +71,14 @@ check_module_rules() {
         fi
         if grep -qE '^set -[eu]' "$module"; then
             echo "ERRORE: $name contiene 'set -e/-u' (ammesso solo in $HEADER_MODULE)" >&2
+            errors=1
+        fi
+        # Un exit al livello superiore di un modulo terminerebbe lo script
+        # a metà concatenazione. Il controllo completo sui side effect sta
+        # in tests/test_no_side_effects.sh, ma questo caso è così grave da
+        # meritare un blocco anche in fase di build, che gira sempre.
+        if [ "$name" != "90_main.sh" ] && grep -qE '^exit\b' "$module"; then
+            echo "ERRORE: $name contiene un exit al livello superiore" >&2
             errors=1
         fi
     done

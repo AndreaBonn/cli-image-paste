@@ -23,7 +23,17 @@ V1_DEFAULTS=(500 3000 7 0.1)
 # Nella v2 stanno indentate dentro config_defaults(): l'ancoraggio a inizio
 # riga è ciò che distingue le due versioni.
 is_v1_script() {
-    [ -f "$1" ] && grep -q '^MAX_LOG_LINES=' "$1"
+    [ -f "$1" ] || return 1
+
+    # Un file presente ma illeggibile non è "non v1": è un caso da
+    # segnalare, altrimenti la migrazione viene saltata in silenzio e
+    # l'utente perde la configurazione senza sapere perché.
+    if [ ! -r "$1" ]; then
+        echo "ATTENZIONE: $1 non è leggibile, migrazione della configurazione saltata." >&2
+        return 1
+    fi
+
+    grep -q '^MAX_LOG_LINES=' "$1"
 }
 
 read_v1_value() {

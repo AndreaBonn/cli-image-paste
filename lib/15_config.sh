@@ -97,19 +97,26 @@ _config_has_control_chars() {
 # sola dagli appunti. La validazione è a whitelist, non a blacklist.
 _config_valid_template() {
     local value="$1"
-    local stripped
+    local stripped probe
 
     [ -z "$value" ] && return 0
     [ "${#value}" -gt 200 ] && return 1
     _config_has_control_chars "$value" && return 1
 
-    # Esattamente un segnaposto
+    # Esattamente un segnaposto, e nessun altro '%' che possa essere
+    # interpretato come specificatore di formato
     stripped="${value//%s/}"
     [ "${#value}" -eq $(( ${#stripped} + 2 )) ] || return 1
     [[ "$stripped" == *%* ]] && return 1
 
-    # Solo caratteri necessari a comporre un comando di allegato
-    [[ "$stripped" =~ ^[A-Za-z0-9/@._:=+-]*[[:space:]]*[A-Za-z0-9/@._:=+-]*$ ]] || return 1
+    # La validazione avviene sulla stringa intera con il segnaposto
+    # sostituito da un token innocuo, non sul residuo: rimuovere "%s"
+    # lascerebbe spazi orfani che renderebbero la forma irriconoscibile.
+    # Sono ammessi solo i caratteri necessari a comporre un comando di
+    # allegato, in token separati da spazi singoli, così restano validi
+    # template come "mytool --file %s".
+    probe="${value//%s/X}"
+    [[ "$probe" =~ ^[A-Za-z0-9/@._:=+-]+( [A-Za-z0-9/@._:=+-]+)*$ ]] || return 1
     return 0
 }
 
@@ -144,40 +151,48 @@ _config_unquote() {
 # una chiave scartata in silenzio è indistinguibile da una applicata.
 config_load_file() {
     local file="$1"
-    local line key value type
+    local line
 
     CONFIG_WARNINGS=()
     [ -f "$file" ] || return 0
 
     while IFS= read -r line || [ -n "$line" ]; do
-        line="${line#"${line%%[![:space:]]*}"}"
-        [ -z "$line" ] && continue
-        [[ "$line" == \#* ]] && continue
-
-        if [[ "$line" != *=* ]]; then
-            CONFIG_WARNINGS+=("riga senza '=' ignorata: $line")
-            continue
-        fi
-
-        key="${line%%=*}"
-        value="${line#*=}"
-        key="${key%"${key##*[![:space:]]}"}"
-        value="${value#"${value%%[![:space:]]*}"}"
-        value="${value%"${value##*[![:space:]]}"}"
-        value=$(_config_unquote "$value")
-
-        if ! type=$(_config_type_of "$key"); then
-            CONFIG_WARNINGS+=("chiave sconosciuta ignorata: $key")
-            continue
-        fi
-
-        if ! _config_validate "$type" "$value"; then
-            CONFIG_WARNINGS+=("valore non valido per $key, mantenuto il default")
-            continue
-        fi
-
-        printf -v "$key" '%s' "$value"
+        _config_parse_line "$line"
     done < "$file"
+}
+
+# Applica una singola riga di configurazione, oppure registra il motivo per
+# cui è stata scartata.
+_config_parse_line() {
+    local line="$1" key value type
+
+    line="${line#"${line%%[![:space:]]*}"}"
+    [ -z "$line" ] && return 0
+    [[ "$line" == \#* ]] && return 0
+
+    if [[ "$line" != *=* ]]; then
+        CONFIG_WARNINGS+=("riga senza '=' ignorata: $line")
+        return 0
+    fi
+
+    key="${line%%=*}"
+    value="${line#*=}"
+    key="${key%"${key##*[![:space:]]}"}"
+    value="${value#"${value%%[![:space:]]*}"}"
+    value="${value%"${value##*[![:space:]]}"}"
+    value=$(_config_unquote "$value")
+
+    if ! type=$(_config_type_of "$key"); then
+        CONFIG_WARNINGS+=("chiave sconosciuta ignorata: $key")
+        return 0
+    fi
+
+    if ! _config_validate "$type" "$value"; then
+        CONFIG_WARNINGS+=("valore non valido per $key, mantenuto il default")
+        return 0
+    fi
+
+    printf -v "$key" '%s' "$value"
 }
 
 # --- Override da ambiente ---
