@@ -264,6 +264,19 @@ dall'elenco, viene usato il percorso nudo, che è sempre incollabile.
 Impostare `FORMAT_TEMPLATE` nella configurazione ha la precedenza sul
 rilevamento.
 
+### Riconsegnare l'ultima immagine
+
+```bash
+paste-image --last      # la più recente
+paste-image --last 3    # la terzultima
+```
+
+La consegna tramite gli appunti sovrascrive gli appunti stessi, e questo
+distrugge l'immagine di partenza: un secondo tentativo richiederebbe
+altrimenti di rifare lo screenshot. Il file è ancora su disco, e questo
+serve a riconsegnarlo. Se nel frattempo l'immagine è stata rimossa dalla
+pulizia automatica, viene detto, invece di digitare un percorso morto.
+
 ### Catturare direttamente uno screenshot
 
 ```bash

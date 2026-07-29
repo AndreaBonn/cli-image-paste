@@ -58,6 +58,10 @@ main() {
                 "$HOME/.local/bin/paste-image"
             exit $?
             ;;
+        --last)
+            PASTE_IMAGE_SOURCE="history"
+            PASTE_IMAGE_HISTORY_INDEX="${2:-1}"
+            ;;
         --screenshot|-s)
             PASTE_IMAGE_SOURCE="screenshot"
             ;;
@@ -93,7 +97,9 @@ main() {
     active_window=$(capture_active_window)
 
     local file_path acquire_status=0
-    if [ "${PASTE_IMAGE_SOURCE:-clipboard}" = "screenshot" ]; then
+    if [ "${PASTE_IMAGE_SOURCE:-clipboard}" = "history" ]; then
+        file_path=$(source_from_history "${PASTE_IMAGE_HISTORY_INDEX:-1}") || acquire_status=$?
+    elif [ "${PASTE_IMAGE_SOURCE:-clipboard}" = "screenshot" ]; then
         file_path=$(source_from_screenshot "$output_dir") || acquire_status=$?
     else
         file_path=$(acquire_image "$output_dir") || acquire_status=$?
@@ -115,6 +121,11 @@ main() {
 
     local hint
     hint=$(deliver_path "$file_path" "$active_window") || exit 1
+
+    # Registrato solo dopo una consegna riuscita: uno storico che contiene
+    # tentativi falliti manda l'utente a ripescare qualcosa che non ha mai
+    # funzionato.
+    history_append "$file_path"
 
     if [ -n "$hint" ]; then
         notify "$hint"

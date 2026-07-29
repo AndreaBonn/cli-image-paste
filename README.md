@@ -262,6 +262,19 @@ on X11; elsewhere, and for any program not in the list, the bare path is used
 because it is always pasteable. Setting `FORMAT_TEMPLATE` in the config
 overrides detection.
 
+### Re-delivering the last image
+
+```bash
+paste-image --last      # the most recent
+paste-image --last 3    # the third most recent
+```
+
+Delivering through the clipboard overwrites the clipboard itself, which
+destroys the source image: a second attempt would otherwise mean taking the
+screenshot again. The file is still on disk, and this is what hands it over
+again. If the image has since been cleaned up, that is said rather than
+typing a dead path.
+
 ### Capturing a screenshot directly
 
 ```bash

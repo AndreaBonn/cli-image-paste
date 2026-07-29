@@ -62,3 +62,71 @@ notify() {
             ;;
     esac
 }
+
+# --- Storico delle immagini ---
+#
+# La consegna via appunti sovrascrive gli appunti stessi, quindi distrugge
+# l'immagine di partenza: un secondo tentativo è impossibile. Il file resta
+# su disco, e questo storico è ciò che permette di riconsegnarlo senza
+# ripassare dagli appunti. Non è un extra: è la rete di sicurezza di una
+# conseguenza diretta del modo in cui la consegna funziona su GNOME Wayland.
+
+history_file() {
+    echo "$LOG_DIR/history"
+}
+
+# Registra un path. Il file più recente è in cima, così --last senza
+# argomenti non deve contare nulla.
+history_append() {
+    local path="$1" file existing
+    file=$(history_file)
+
+    (
+        flock -w 2 9 || exit 0
+
+        existing=""
+        if [ -f "$file" ]; then
+            # La stessa immagine consegnata due volte non deve occupare due
+            # posizioni: sposterebbe in basso quelle davvero diverse.
+            existing=$(grep -vxF "$path" "$file" 2>/dev/null || true)
+        fi
+
+        {
+            printf '%s\n' "$path"
+            [ -n "$existing" ] && printf '%s\n' "$existing"
+        } | head -n "${HISTORY_SIZE:-50}" > "${file}.tmp"
+
+        mv "${file}.tmp" "$file"
+    ) 9>"${file}.lock" || true
+}
+
+# Stampa il path dell'ennesima voce, 1 essendo la più recente.
+# Ritorna 1 se la voce non esiste, 2 se esiste ma il file non c'è più.
+history_get() {
+    local index="${1:-1}" file path
+    file=$(history_file)
+
+    [ -f "$file" ] || return 1
+    [ "$index" -ge 1 ] 2>/dev/null || return 1
+
+    path=$(sed -n "${index}p" "$file" 2>/dev/null)
+    [ -n "$path" ] || return 1
+
+    # Un'immagine può essere stata rimossa dalla pulizia automatica o
+    # dall'utente: dirlo è più utile che digitare un path morto.
+    [ -f "$path" ] || return 2
+
+    echo "$path"
+}
+
+history_prune_missing() {
+    local file path kept=""
+    file=$(history_file)
+    [ -f "$file" ] || return 0
+
+    while IFS= read -r path; do
+        [ -f "$path" ] && kept="${kept}${path}"$'\n'
+    done < "$file"
+
+    printf '%s' "$kept" > "$file"
+}
