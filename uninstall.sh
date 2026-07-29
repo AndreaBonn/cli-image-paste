@@ -104,7 +104,21 @@ else
     echo "Directory log non trovata (già rimossa?)"
 fi
 
-# --- 4b. Configurazione utente ---
+# --- 4b. Scorciatoia KDE ---
+# La rimozione è simmetrica all'installazione: se il gruppo non c'è, lo
+# script non fa nulla e non fallisce.
+
+_SELF_U="${BASH_SOURCE[0]}"
+_SELF_U_DIR="${_SELF_U%/*}"
+[ "$_SELF_U_DIR" = "$_SELF_U" ] && _SELF_U_DIR="."
+PROJECT_ROOT="$(cd "$_SELF_U_DIR" && pwd)"
+
+if [ -f "${XDG_CONFIG_HOME:-$HOME/.config}/kglobalshortcutsrc" ] &&
+   [ -f "$PROJECT_ROOT/scripts/shortcut-kde.sh" ]; then
+    bash "$PROJECT_ROOT/scripts/shortcut-kde.sh" remove
+fi
+
+# --- 4c. Configurazione utente ---
 # Il config non è stato generato da noi: contiene scelte dell'utente e
 # sopravvive alla disinstallazione per default, così reinstallare le
 # ritrova. Chi vuole rimuovere ogni traccia lo chiede esplicitamente.

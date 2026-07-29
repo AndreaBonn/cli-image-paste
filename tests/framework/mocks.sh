@@ -17,7 +17,7 @@
 setup_restricted_path() {
     local sys_bin="$TEST_TMPDIR/sys_bin"
     mkdir -p "$sys_bin"
-    local base_cmds=(bash grep sed echo cat rm mkdir chmod cp touch sleep tr head printf mktemp wc)
+    local base_cmds=(bash grep sed echo cat rm mv mkdir chmod cp touch sleep tr head printf mktemp wc)
     local cmd real_path
     for cmd in "${base_cmds[@]}" "$@"; do
         real_path=$(which "$cmd" 2>/dev/null || true)

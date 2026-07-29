@@ -132,6 +132,15 @@ case "$DESKTOP" in
         echo "  Script: $INSTALL_DIR/$SCRIPT_NAME"
         exit 0
         ;;
+    kde)
+        echo ""
+        bash "$SCRIPT_DIR/scripts/shortcut-kde.sh" install "$SHORTCUT" \
+            "$INSTALL_DIR/$SCRIPT_NAME"
+        echo ""
+        echo "=== Installazione completata ==="
+        echo "  Script: $INSTALL_DIR/$SCRIPT_NAME"
+        exit 0
+        ;;
     gnome|unity|cinnamon)
         : # Prosegue con la configurazione via gsettings
         ;;

@@ -266,6 +266,38 @@ paste-image -v         # Mostra la versione (forma breve)
 
 ## Configurazione
 
+### Scorciatoia per ciascun desktop
+
+L'installer sa come ogni ambiente conserva le sue scorciatoie, e quando non
+lo sa non fallisce: al peggio stampa cosa fare a mano.
+
+| Desktop            | Come viene registrata la scorciatoia                          |
+| ------------------ | ------------------------------------------------------------- |
+| GNOME, Unity       | scritta automaticamente tramite `gsettings`                    |
+| KDE Plasma         | scritta in `kglobalshortcutsrc`, previo backup del file        |
+| sway, Hyprland, i3 | viene stampata la riga di configurazione esatta da incollare   |
+| altri              | viene stampato il comando da associare                         |
+
+Sui window manager non viene modificato nulla: quel file di configurazione è
+tuo. Per riottenere la riga in un secondo momento:
+
+```bash
+paste-image --print-shortcut sway       # oppure i3, hyprland
+paste-image --print-shortcut sway '<Super>v'
+```
+
+I nomi dei modificatori cambiano da un ambiente all'altro. `<Super>` diventa
+`Meta` su KDE, `Mod4` su sway e i3, `SUPER` su Hyprland: la conversione la fa
+l'installer, tu scrivi sempre nella forma GTK.
+
+Il default è `Ctrl+Shift+V` su X11 e `Super+V` su Wayland. Su Wayland il
+percorso arriva attraverso gli appunti, e `Ctrl+Shift+V` è già l'incolla dei
+terminali: i due si darebbero battaglia.
+
+**Nota su KDE:** il contenuto scritto nel file è coperto dai test, ma non è
+stato verificato che la scorciatoia scatti davvero su KDE, perché non era
+disponibile una macchina. Se usi KDE e non funziona, vale la pena segnalarlo.
+
 ### Cambiare la scorciatoia da tastiera
 
 Durante l'installazione puoi scegliere una scorciatoia personalizzata. Dopo l'installazione, modificala con:

@@ -265,6 +265,38 @@ paste-image -v         # Show version (short form)
 
 ## Configuration
 
+### Keyboard shortcut per desktop
+
+The installer knows how each environment stores its shortcuts, and never
+fails when it does not: worst case it prints what to do by hand.
+
+| Desktop            | How the shortcut is registered                              |
+| ------------------ | ----------------------------------------------------------- |
+| GNOME, Unity       | written automatically via `gsettings`                       |
+| KDE Plasma         | written to `kglobalshortcutsrc`, with a backup taken first   |
+| sway, Hyprland, i3 | the exact config line is printed for you to paste            |
+| anything else      | the command to bind is printed                               |
+
+On window managers nothing is edited for you: that config file is yours. To
+get the line again later:
+
+```bash
+paste-image --print-shortcut sway       # or i3, hyprland
+paste-image --print-shortcut sway '<Super>v'
+```
+
+Modifier names differ per environment. `<Super>` is `Meta` on KDE, `Mod4` on
+sway and i3, `SUPER` on Hyprland: the installer converts them, so you only
+ever type the GTK form.
+
+The default is `Ctrl+Shift+V` on X11 and `Super+V` on Wayland. On Wayland the
+path is delivered through the clipboard, and `Ctrl+Shift+V` is already the
+terminal's paste, so the two would fight each other.
+
+**KDE note:** the file contents are covered by tests, but the shortcut
+actually firing on KDE has not been verified: no machine was available. If
+you run KDE and it does not work, that is worth reporting.
+
 ### Changing the keyboard shortcut
 
 During installation you can choose a custom shortcut. After installation, change it with:
