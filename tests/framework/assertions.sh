@@ -51,7 +51,7 @@ assert_contains() {
     local haystack="$1"
     local needle="$2"
     local label="${3:-assert_contains}"
-    if ! echo "$haystack" | grep -qF "$needle"; then
+    if ! echo "$haystack" | grep -qF -- "$needle"; then
         _test_fail "$label: output does not contain '$needle'"
     fi
 }
@@ -60,7 +60,7 @@ assert_not_contains() {
     local haystack="$1"
     local needle="$2"
     local label="${3:-assert_not_contains}"
-    if echo "$haystack" | grep -qF "$needle"; then
+    if echo "$haystack" | grep -qF -- "$needle"; then
         _test_fail "$label: output should not contain '$needle'"
     fi
 }
@@ -71,7 +71,7 @@ assert_file_contains() {
     local label="${3:-assert_file_contains}"
     if [ ! -f "$filepath" ]; then
         _test_fail "$label: file '$filepath' does not exist"
-    elif ! grep -qF "$needle" "$filepath"; then
+    elif ! grep -qF -- "$needle" "$filepath"; then
         _test_fail "$label: file '$filepath' does not contain '$needle'"
     fi
 }
@@ -80,7 +80,7 @@ assert_file_not_contains() {
     local filepath="$1"
     local needle="$2"
     local label="${3:-assert_file_not_contains}"
-    if [ -f "$filepath" ] && grep -qF "$needle" "$filepath"; then
+    if [ -f "$filepath" ] && grep -qF -- "$needle" "$filepath"; then
         _test_fail "$label: file '$filepath' should not contain '$needle'"
     fi
 }
