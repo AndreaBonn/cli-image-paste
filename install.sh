@@ -40,78 +40,31 @@ fi
 VERSION=$(sed -n 's/^VERSION="\([^"]*\)"/\1/p' "$DIST_SCRIPT")
 BINDING_ID="paste-image"
 BINDING_PATH="/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/${BINDING_ID}/"
-DEFAULT_SHORTCUT="<Control><Shift>v"
+# Su Wayland la consegna avviene tramite gli appunti, e Ctrl+Shift+V è già
+# l'incolla dei terminali: usarlo qui creerebbe un ciclo in cui la seconda
+# pressione riesegue il tool, che trova testo e non un'immagine.
+_MODULES="$SCRIPT_DIR/lib"
+# shellcheck source=lib/05_text.sh
+source "$_MODULES/05_text.sh"
+# shellcheck source=lib/10_env_detect.sh
+source "$_MODULES/10_env_detect.sh"
+# shellcheck source=lib/60_shortcut.sh
+source "$_MODULES/60_shortcut.sh"
+
+if [ "$(session_type)" = "wayland" ]; then
+    DEFAULT_SHORTCUT="<Super>v"
+else
+    DEFAULT_SHORTCUT="<Control><Shift>v"
+fi
 
 echo "=== Installazione paste-image v${VERSION} ==="
 echo ""
 
 # --- 1. Verifica e installa dipendenze ---
 
-# Rileva package manager disponibile
-if command -v apt &>/dev/null; then
-    PKG_MANAGER="apt"
-elif command -v dnf &>/dev/null; then
-    PKG_MANAGER="dnf"
-elif command -v pacman &>/dev/null; then
-    PKG_MANAGER="pacman"
-else
-    PKG_MANAGER=""
-fi
-
-# Mappa il nome del pacchetto notify-send in base alla distro
-case "$PKG_MANAGER" in
-    apt)    NOTIFY_PKG="libnotify-bin" ;;
-    dnf)    NOTIFY_PKG="libnotify" ;;
-    pacman) NOTIFY_PKG="libnotify" ;;
-    *)      NOTIFY_PKG="libnotify (o equivalente)" ;;
-esac
-
-MISSING_PKGS=()
-
-if ! command -v xclip &>/dev/null; then
-    MISSING_PKGS+=("xclip")
-fi
-
-if ! command -v xdotool &>/dev/null; then
-    MISSING_PKGS+=("xdotool")
-fi
-
-if ! command -v notify-send &>/dev/null; then
-    MISSING_PKGS+=("$NOTIFY_PKG")
-fi
-
-if [ ${#MISSING_PKGS[@]} -gt 0 ]; then
-    echo "Dipendenze mancanti: ${MISSING_PKGS[*]}"
-
-    if [ -z "$PKG_MANAGER" ]; then
-        echo "ERRORE: Nessun package manager riconosciuto (apt, dnf, pacman)."
-        echo "Installa manualmente: ${MISSING_PKGS[*]}"
-        exit 1
-    fi
-
-    read -rp "Vuoi installarle con $PKG_MANAGER? [S/n] " REPLY
-    REPLY=${REPLY:-S}
-    if [[ "$REPLY" =~ ^[SsYy]$ ]]; then
-        case "$PKG_MANAGER" in
-            apt)
-                sudo apt update -qq
-                sudo apt install -y "${MISSING_PKGS[@]}"
-                ;;
-            dnf)
-                sudo dnf install -y "${MISSING_PKGS[@]}"
-                ;;
-            pacman)
-                sudo pacman -S --noconfirm "${MISSING_PKGS[@]}"
-                ;;
-        esac
-        echo "Dipendenze installate."
-    else
-        echo "Installazione annullata. Installa manualmente: ${MISSING_PKGS[*]}"
-        exit 1
-    fi
-fi
-
-echo "Dipendenze: OK"
+# I pacchetti necessari dipendono dalla sessione, quindi la logica vive in
+# uno script dedicato.
+bash "$SCRIPT_DIR/scripts/install-deps.sh"
 
 # --- 2. Copia script in ~/.local/bin ---
 
@@ -149,27 +102,51 @@ else
     echo "PATH: OK"
 fi
 
-# --- 4. Configura shortcut GNOME ---
+# --- 4. Configura la scorciatoia ---
+
+DESKTOP=$(session_desktop)
 
 echo ""
-echo "--- Configurazione shortcut GNOME ---"
+echo "--- Configurazione scorciatoia ($DESKTOP) ---"
 
-# Validazione formato shortcut GTK
-# Formato valido: uno o più <Modifier> seguiti da un nome tasto
-# Es: <Control><Shift>v, <Super>Print, <Alt>F1, <Control>KP_Enter
-validate_shortcut() {
-    [[ "$1" =~ ^\<[A-Za-z]+\>(\<[A-Za-z]+\>)*[a-zA-Z0-9_]+$ ]]
-}
-
-# Chiedi shortcut all'utente (con validazione)
+# Chiedi la scorciatoia all'utente, nel formato canonico GTK
 while true; do
-    read -rp "Shortcut da tastiera (default: $DEFAULT_SHORTCUT): " USER_SHORTCUT
+    read -rp "Scorciatoia da tastiera (default: $DEFAULT_SHORTCUT): " USER_SHORTCUT
     SHORTCUT="${USER_SHORTCUT:-$DEFAULT_SHORTCUT}"
-    if validate_shortcut "$SHORTCUT"; then
+    if shortcut_validate_gtk "$SHORTCUT"; then
         break
     fi
-    echo "ERRORE: formato shortcut non valido. Usa il formato GTK, es: <Control><Alt>v"
+    echo "ERRORE: formato non valido. Usa il formato GTK, es: <Control><Alt>v"
 done
+
+# Sui window manager non esiste un registro da scrivere: la scorciatoia vive
+# nel file di configurazione dell'utente. Stampare la riga esatta e uscire
+# e' piu' utile che fallire, ed e' meno invasivo che modificargli il file.
+case "$DESKTOP" in
+    sway|hyprland|i3|wlroots)
+        WM="$DESKTOP"
+        [ "$WM" = "wlroots" ] && WM="sway"
+        echo ""
+        shortcut_print_instructions "$WM" "$SHORTCUT" "$INSTALL_DIR/$SCRIPT_NAME"
+        echo "=== Installazione completata ==="
+        echo "  Script: $INSTALL_DIR/$SCRIPT_NAME"
+        exit 0
+        ;;
+    gnome|unity|cinnamon)
+        : # Prosegue con la configurazione via gsettings
+        ;;
+    *)
+        echo ""
+        echo "Ambiente '$DESKTOP' non gestito automaticamente."
+        echo "Registra la scorciatoia dalle impostazioni del tuo desktop,"
+        echo "associandola al comando:"
+        echo ""
+        echo "    $INSTALL_DIR/$SCRIPT_NAME"
+        echo ""
+        echo "=== Installazione completata ==="
+        exit 0
+        ;;
+esac
 
 # Leggi keybindings esistenti
 SCHEMA="org.gnome.settings-daemon.plugins.media-keys"
