@@ -13,10 +13,49 @@ PASSED_SUITES=0
 FAILED_SUITES=0
 FAILED_SUITE_NAMES=()
 SHELLCHECK_FAILED=0
+SIZE_GATE_FAILED=0
+
+# Limiti da code-standards: un sorgente oltre questa soglia va scomposto.
+MAX_FILE_LINES=300
 
 echo "==============================="
-echo "  paste-images-cli test runner"
+echo "  cli-image-paste test runner"
 echo "==============================="
+echo ""
+
+# ── Build: l'artefatto è ciò che i test eseguono ──
+echo "--- Build artefatto ---"
+echo ""
+if ! bash "$PROJECT_DIR/scripts/build.sh"; then
+    echo "ERRORE: build fallita, impossibile proseguire."
+    exit 1
+fi
+echo ""
+
+# ── Gate dimensionale sui sorgenti ──
+# Fallisce, non avvisa: senza un gate eseguibile il limite si erode
+# feature dopo feature. L'artefatto generato è escluso per costruzione.
+echo "--- Gate dimensionale (max $MAX_FILE_LINES righe) ---"
+echo ""
+
+SIZE_TARGETS=("$PROJECT_DIR"/lib/*.sh "$PROJECT_DIR"/scripts/*.sh
+              "$PROJECT_DIR/install.sh" "$PROJECT_DIR/uninstall.sh"
+              "$SCRIPT_DIR"/*.sh "$SCRIPT_DIR"/framework/*.sh)
+
+for target in "${SIZE_TARGETS[@]}"; do
+    [ -f "$target" ] || continue
+    lines=$(wc -l < "$target")
+    if [ "$lines" -gt "$MAX_FILE_LINES" ]; then
+        echo "  FAIL: ${target#"$PROJECT_DIR"/} — $lines righe (limite $MAX_FILE_LINES)"
+        SIZE_GATE_FAILED=1
+    fi
+done
+
+if [ "$SIZE_GATE_FAILED" -eq 0 ]; then
+    echo "Gate dimensionale: OK"
+else
+    echo "Gate dimensionale: FALLITO — scomporre i file segnalati."
+fi
 echo ""
 
 # ── ShellCheck: analisi statica prima dei test funzionali ──
@@ -25,12 +64,16 @@ echo ""
 
 if command -v shellcheck &>/dev/null; then
     SHELLCHECK_TARGETS=(
-        "$PROJECT_DIR/paste-image"
+        "$PROJECT_DIR/dist/paste-image"
         "$PROJECT_DIR/install.sh"
         "$PROJECT_DIR/uninstall.sh"
     )
+    # Moduli sorgente e script di build
+    for f in "$PROJECT_DIR"/lib/*.sh "$PROJECT_DIR"/scripts/*.sh; do
+        [ -f "$f" ] && SHELLCHECK_TARGETS+=("$f")
+    done
     # Aggiungi anche i file di test e il runner stesso
-    for f in "$SCRIPT_DIR"/*.sh; do
+    for f in "$SCRIPT_DIR"/*.sh "$SCRIPT_DIR"/framework/*.sh; do
         [ -f "$f" ] && SHELLCHECK_TARGETS+=("$f")
     done
 
@@ -98,7 +141,13 @@ else
     echo "ShellCheck:     OK"
 fi
 
-if [ ${#FAILED_SUITE_NAMES[@]} -gt 0 ] || [ "$SHELLCHECK_FAILED" -gt 0 ]; then
+if [ "$SIZE_GATE_FAILED" -gt 0 ]; then
+    echo "Gate righe:     FALLITO"
+else
+    echo "Gate righe:     OK"
+fi
+
+if [ ${#FAILED_SUITE_NAMES[@]} -gt 0 ] || [ "$SHELLCHECK_FAILED" -gt 0 ] || [ "$SIZE_GATE_FAILED" -gt 0 ]; then
     if [ ${#FAILED_SUITE_NAMES[@]} -gt 0 ]; then
         echo ""
         echo "Suite fallite:"

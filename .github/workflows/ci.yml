@@ -13,8 +13,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Build artifact
+        run: bash scripts/build.sh
+
       - name: Run ShellCheck
-        run: shellcheck paste-image install.sh uninstall.sh tests/*.sh
+        run: |
+          shellcheck dist/paste-image lib/*.sh scripts/*.sh \
+            install.sh uninstall.sh tests/*.sh tests/framework/*.sh
 
   test:
     name: Tests
