@@ -256,6 +256,22 @@ sudo pacman -S xclip xdotool libnotify
 4. L'immagine viene salvata e il suo percorso digitato nel terminale
 5. **Premi Invio** per inviarla all'assistente di coding
 
+### Catturare direttamente uno screenshot
+
+```bash
+paste-image --screenshot
+```
+
+Seleziona un'area, la salva e consegna il percorso in un solo passaggio,
+saltando il giro da copia e incolla. Associato a una seconda scorciatoia
+diventa il modo più rapido di mostrare qualcosa a un assistente.
+
+Lo strumento di cattura viene scelto in base all'ambiente:
+`gnome-screenshot` su GNOME, `spectacle` su KDE, `grim` con `slurp` sui
+compositori wlroots, con ripiego su `flameshot`, `maim`, `scrot` o `import`.
+Annullare la selezione è trattato come una decisione, non come un errore:
+non viene scritto nulla e non compare alcun messaggio di fallimento.
+
 ### Invocazione manuale
 
 ```bash

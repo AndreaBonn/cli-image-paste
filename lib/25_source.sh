@@ -166,3 +166,116 @@ _new_image_file() {
     fi
 }
 
+
+# --- Screenshot come sorgente alternativa ---
+#
+# Non è una trasformazione: è un modo diverso di ottenere l'immagine, che
+# salta del tutto il passaggio dagli appunti. È anche il gesto più comune di
+# chi manda immagini a un assistente, e farlo in un colpo solo elimina i due
+# passaggi "cattura" e "copia".
+
+# Stampa il comando di cattura area adatto all'ambiente, o niente se nessuno
+# strumento è disponibile. Funzione pura: riceve l'ambiente come argomento.
+screenshot_tool_for() {
+    local session="$1" desktop="$2"
+
+    # L'ordine mette per primo lo strumento nativo del desktop, che rispetta
+    # il tema e i permessi del portal, e scende verso quelli generici.
+    case "$session:$desktop" in
+        wayland:gnome|wayland:unity|wayland:cinnamon)
+            _screenshot_first_available gnome-screenshot spectacle grim
+            ;;
+        wayland:kde)
+            _screenshot_first_available spectacle grim gnome-screenshot
+            ;;
+        wayland:*)
+            _screenshot_first_available grim flameshot spectacle
+            ;;
+        *:gnome|*:unity|*:cinnamon)
+            _screenshot_first_available gnome-screenshot flameshot maim scrot import
+            ;;
+        *:kde)
+            _screenshot_first_available spectacle flameshot maim scrot import
+            ;;
+        *)
+            _screenshot_first_available flameshot maim scrot import gnome-screenshot
+            ;;
+    esac
+}
+
+_screenshot_first_available() {
+    local tool
+    for tool in "$@"; do
+        if command -v "$tool" &>/dev/null; then
+            # grim cattura tutto lo schermo da solo: per selezionare un'area
+            # serve slurp, e senza quello non è la stessa funzione.
+            if [ "$tool" = "grim" ] && ! command -v slurp &>/dev/null; then
+                continue
+            fi
+            echo "$tool"
+            return 0
+        fi
+    done
+    return 1
+}
+
+# Esegue la cattura di un'area sul file indicato.
+#
+# Ritorna 0 con il file scritto, 2 se l'utente ha annullato la selezione,
+# 1 su errore. L'annullamento non è un errore: è una decisione.
+screenshot_capture() {
+    local tool="$1" dest="$2"
+
+    case "$tool" in
+        gnome-screenshot) gnome-screenshot -a -f "$dest" 2>/dev/null ;;
+        spectacle)        spectacle -b -r -n -o "$dest" 2>/dev/null ;;
+        grim)             grim -g "$(slurp 2>/dev/null)" "$dest" 2>/dev/null ;;
+        flameshot)        flameshot gui --raw > "$dest" 2>/dev/null ;;
+        maim)             maim -s "$dest" 2>/dev/null ;;
+        scrot)            scrot -s "$dest" 2>/dev/null ;;
+        import)           import "$dest" 2>/dev/null ;;
+        *)                return 1 ;;
+    esac
+
+    # Ogni strumento segnala l'annullamento a modo suo, e alcuni escono con
+    # successo lasciando un file vuoto: l'unico segnale affidabile è se il
+    # file contiene qualcosa.
+    if [ ! -s "$dest" ]; then
+        rm -f "$dest"
+        return 2
+    fi
+
+    return 0
+}
+
+# Acquisisce un'immagine catturando un'area dello schermo.
+source_from_screenshot() {
+    local output_dir="$1" tool dest status
+
+    if ! tool=$(screenshot_tool_for "$(session_type)" "$(session_desktop)"); then
+        notify "Nessuno strumento di cattura disponibile. Installa gnome-screenshot, spectacle, grim con slurp, flameshot o maim."
+        return 1
+    fi
+
+    dest=$(_new_image_file "$output_dir" "png") || return 1
+
+    screenshot_capture "$tool" "$dest"
+    status=$?
+
+    case "$status" in
+        0)
+            log "screenshot catturato con $tool"
+            echo "$dest"
+            return 0
+            ;;
+        2)
+            log "selezione annullata dall'utente"
+            return 2
+            ;;
+        *)
+            notify "Cattura non riuscita con $tool"
+            rm -f "$dest"
+            return 1
+            ;;
+    esac
+}

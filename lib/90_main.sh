@@ -58,6 +58,9 @@ main() {
                 "$HOME/.local/bin/paste-image"
             exit $?
             ;;
+        --screenshot|-s)
+            PASTE_IMAGE_SOURCE="screenshot"
+            ;;
         --reset-capabilities)
             capabilities_reset
             echo "Cache delle capacità azzerata: i backend verranno riprovati."
@@ -89,8 +92,19 @@ main() {
     local active_window
     active_window=$(capture_active_window)
 
-    local file_path
-    file_path=$(acquire_image "$output_dir") || exit 1
+    local file_path acquire_status=0
+    if [ "${PASTE_IMAGE_SOURCE:-clipboard}" = "screenshot" ]; then
+        file_path=$(source_from_screenshot "$output_dir") || acquire_status=$?
+    else
+        file_path=$(acquire_image "$output_dir") || acquire_status=$?
+    fi
+
+    # Annullare la selezione è una decisione dell'utente, non un errore:
+    # nessuna notifica di fallimento e uscita pulita.
+    if [ "$acquire_status" -eq 2 ]; then
+        exit 0
+    fi
+    [ "$acquire_status" -eq 0 ] || exit 1
 
     # Gli intermedi della pipeline non sopravvivono all'uscita, nemmeno se
     # qualcosa fallisce a metà: la pipeline moltiplica le copie di contenuto
