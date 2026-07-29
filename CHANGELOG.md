@@ -1,3 +1,80 @@
+## What's Changed in v2.0.0
+
+> Wayland support, more clipboard formats, shortcut registration beyond
+> GNOME, and a small pipeline around the image.
+
+### ⚠️ Breaking
+
+- **The executable is now generated.** Sources live in `lib/`, and
+  `scripts/build.sh` concatenates them into `dist/paste-image`. `install.sh`
+  builds it, so installing from a fresh clone is unchanged, but the repository
+  no longer contains a runnable `paste-image` at its root. Fetching that file
+  directly with `curl` no longer works: use a release asset, or clone and run
+  the installer.
+- **Configuration moved out of the script** into
+  `~/.config/paste-image/config`. In v1 the constants were edited inside the
+  installed script, so every reinstall wiped them. `install.sh` offers to
+  migrate customised values the first time it runs.
+- `xdotool` is no longer a hard requirement: without it the path is delivered
+  through the clipboard instead of the run being refused.
+
+### ✨ Added
+
+- Wayland support. The clipboard is read through `wl-paste`, and the delivery
+  backend is chosen per session and compositor. On GNOME Wayland the path goes
+  to the clipboard, because Mutter does not implement the protocol `wtype`
+  needs. Support table in the README.
+- WebP, GIF, TIFF, BMP, AVIF and SVG are converted rather than refused.
+  Animated GIFs yield their first frame.
+- An image **file** copied from a file manager uses its existing path instead
+  of being duplicated.
+- Shortcut registration on KDE, plus printed configuration lines for sway, i3
+  and Hyprland. Unknown desktops no longer abort the install.
+- `--screenshot` captures an area directly, skipping the clipboard round trip.
+- `--last [N]` re-delivers a previously acquired image.
+- `--annotate` opens satty or swappy before delivering.
+- Automatic resizing to a configurable long-side limit (default 1568px), with
+  metadata stripped.
+- Output format adapts to the assistant in the terminal: bare path,
+  `/add <path>` for Aider, `@<path>` for Gemini CLI.
+- `--doctor`, `--print-shortcut`, `--reset-capabilities`, `--help`.
+
+### 🔒 Security
+
+- Everything bound for the terminal is validated first. `xdotool type` was
+  measured synthesising the `Return` keysym for a CR and `Linefeed` for an LF,
+  so a control character in a path is equivalent to pressing Enter at the
+  waiting prompt. Control characters and Unicode bidirectional overrides are
+  refused.
+- The config file is parsed, never sourced. Only whitelisted keys are
+  accepted, each validated by type.
+- The output format template gets the strictest validation of all: unlike a
+  path it is typed on every single invocation, so a hostile value persists.
+- ImageMagick runs under a dedicated restrictive policy with resource limits,
+  rather than the system policy, which is absent on some distributions and
+  permissive on others.
+- Pipeline intermediates are removed as soon as they are no longer needed
+  instead of expiring alongside the result, and the state directory is created
+  with explicit permissions rather than relying on the inherited umask.
+
+### 🐛 Fixed
+
+- `wl-copy` is launched under `setsid`. Measured: it otherwise stays in the
+  caller's process group, so a desktop terminating the group of a shortcut
+  script would take the clipboard selection with it, and the path would vanish
+  before the user could paste.
+- One notification per action. Two used to fire on GNOME, the second covering
+  the first before it could be read.
+
+### ❓ Not verified
+
+- Whether the shortcut actually fires on **KDE**. The file contents are
+  covered by tests, but no machine was available to confirm the behaviour.
+- **GNOME Wayland as a login session**: tested by forcing the environment
+  inside a nested sway, not as a real session.
+
+---
+
 ## What's Changed in v1.0.0
 
 > First release of AndreaBonn/cli-image-paste

@@ -9,6 +9,8 @@ doc_progetto/
 docs/*
 !docs/ARCHITECTURE.md
 !docs/ARCHITECTURE.it.md
+!docs/MANUAL_TESTING.md
+!docs/MANUAL_TESTING.it.md
 
 # Artefatto generato da scripts/build.sh: si ricostruisce, non si versiona
 dist/

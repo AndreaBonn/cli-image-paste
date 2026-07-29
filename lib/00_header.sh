@@ -14,7 +14,7 @@
 
 set -euo pipefail
 
-VERSION="1.0.0"
+VERSION="2.0.0"
 
 # I valori configurabili hanno i loro default in config_defaults(), nel
 # modulo 15_config.sh, insieme al parser e alla validazione.
