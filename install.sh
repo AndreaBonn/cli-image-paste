@@ -11,8 +11,29 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 INSTALL_DIR="$HOME/.local/bin"
 SCRIPT_NAME="paste-image"
 
-# Leggi versione dallo script principale
-VERSION=$(sed -n 's/^VERSION="\([^"]*\)"/\1/p' "$SCRIPT_DIR/$SCRIPT_NAME")
+# I sorgenti stanno in lib/: l'eseguibile è un artefatto generato.
+# Viene costruito se assente o più vecchio di un modulo, così installare
+# da un checkout appena clonato funziona senza passaggi manuali.
+DIST_SCRIPT="$SCRIPT_DIR/dist/$SCRIPT_NAME"
+
+needs_build() {
+    local module
+    [ -f "$DIST_SCRIPT" ] || return 0
+    for module in "$SCRIPT_DIR"/lib/*.sh; do
+        [ -f "$module" ] || continue
+        [ "$module" -nt "$DIST_SCRIPT" ] && return 0
+    done
+    return 1
+}
+
+if needs_build; then
+    echo "Costruzione dell'eseguibile dai moduli in lib/..."
+    bash "$SCRIPT_DIR/scripts/build.sh"
+    echo ""
+fi
+
+# Leggi versione dall'artefatto
+VERSION=$(sed -n 's/^VERSION="\([^"]*\)"/\1/p' "$DIST_SCRIPT")
 BINDING_ID="paste-image"
 BINDING_PATH="/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/${BINDING_ID}/"
 DEFAULT_SHORTCUT="<Control><Shift>v"
@@ -91,7 +112,7 @@ echo "Dipendenze: OK"
 # --- 2. Copia script in ~/.local/bin ---
 
 mkdir -p "$INSTALL_DIR"
-cp "$SCRIPT_DIR/$SCRIPT_NAME" "$INSTALL_DIR/$SCRIPT_NAME"
+cp "$DIST_SCRIPT" "$INSTALL_DIR/$SCRIPT_NAME"
 chmod +x "$INSTALL_DIR/$SCRIPT_NAME"
 echo "Script copiato in: $INSTALL_DIR/$SCRIPT_NAME"
 

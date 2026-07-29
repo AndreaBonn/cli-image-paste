@@ -41,9 +41,9 @@ test_complete_install() {
     if [ ! -x "$FAKE_HOME/.local/bin/paste-image" ]; then
         _test_fail "script non eseguibile"
     fi
-    # Verifica integrità: file copiato identico all'originale
-    if ! diff -q "$PROJECT_DIR/paste-image" "$FAKE_HOME/.local/bin/paste-image" >/dev/null 2>&1; then
-        _test_fail "file copiato non identico all'originale"
+    # Verifica integrità: file copiato identico all'artefatto generato
+    if ! diff -q "$PROJECT_DIR/dist/paste-image" "$FAKE_HOME/.local/bin/paste-image" >/dev/null 2>&1; then
+        _test_fail "file copiato non identico all'artefatto"
     fi
     # gsettings: array contiene paste-image
     local bindings

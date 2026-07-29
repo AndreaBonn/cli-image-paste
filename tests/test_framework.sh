@@ -52,276 +52,70 @@ teardown_test_env() {
     export HOME="$_ORIG_HOME"
     export PATH="$_ORIG_PATH"
     unset MOCK_CALL_LOG GSETTINGS_STATE MOCK_BIN FAKE_HOME
+    unset PASTE_IMAGE_OUTPUT_DIR
+    unset PASTE_IMAGE_SESSION_TYPE PASTE_IMAGE_DESKTOP
     if [ -n "${TEST_TMPDIR:-}" ] && [ -d "$TEST_TMPDIR" ]; then
         rm -rf "$TEST_TMPDIR"
     fi
     unset TEST_TMPDIR
 }
 
-# --- Assertion ---
+# --- Moduli del framework ---
 
-_test_fail() {
-    local msg="$1"
-    _CURRENT_TEST_FAILED=1
-    _CURRENT_TEST_ERRORS="${_CURRENT_TEST_ERRORS}    FAIL: ${msg}"$'\n'
-}
+_FRAMEWORK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=framework/assertions.sh
+source "$_FRAMEWORK_DIR/framework/assertions.sh"
+# shellcheck source=framework/mocks.sh
+source "$_FRAMEWORK_DIR/framework/mocks.sh"
 
-assert_equals() {
-    local expected="$1"
-    local actual="$2"
-    local label="${3:-assert_equals}"
-    if [ "$expected" != "$actual" ]; then
-        _test_fail "$label: expected '$expected', got '$actual'"
-    fi
-}
+# --- Helper per l'artefatto e i moduli ---
 
-assert_exit_code() {
-    local expected="$1"
-    local actual="$2"
-    local label="${3:-assert_exit_code}"
-    if [ "$expected" != "$actual" ]; then
-        _test_fail "$label: expected exit code $expected, got $actual"
-    fi
-}
+# Path dell'artefatto generato. I test invocano questo, non i moduli in lib/.
+# shellcheck disable=SC2034 # Usato dai test suite che importano questo framework
+PASTE_IMAGE_DIST="$PROJECT_DIR/dist/paste-image"
 
-assert_file_exists() {
-    local path="$1"
-    local label="${2:-assert_file_exists}"
-    if [ ! -f "$path" ]; then
-        _test_fail "$label: file '$path' does not exist"
-    fi
-}
+# Costruisce l'artefatto se assente o più vecchio di un modulo.
+# Il runner builda comunque, questo copre l'esecuzione di una singola suite.
+ensure_built() {
+    local dist="$PROJECT_DIR/dist/paste-image"
+    local module newest=""
 
-assert_file_not_exists() {
-    local path="$1"
-    local label="${2:-assert_file_not_exists}"
-    if [ -f "$path" ]; then
-        _test_fail "$label: file '$path' exists but should not"
-    fi
-}
-
-assert_contains() {
-    local haystack="$1"
-    local needle="$2"
-    local label="${3:-assert_contains}"
-    if ! echo "$haystack" | grep -qF "$needle"; then
-        _test_fail "$label: output does not contain '$needle'"
-    fi
-}
-
-assert_not_contains() {
-    local haystack="$1"
-    local needle="$2"
-    local label="${3:-assert_not_contains}"
-    if echo "$haystack" | grep -qF "$needle"; then
-        _test_fail "$label: output should not contain '$needle'"
-    fi
-}
-
-assert_file_contains() {
-    local filepath="$1"
-    local needle="$2"
-    local label="${3:-assert_file_contains}"
-    if [ ! -f "$filepath" ]; then
-        _test_fail "$label: file '$filepath' does not exist"
-    elif ! grep -qF "$needle" "$filepath"; then
-        _test_fail "$label: file '$filepath' does not contain '$needle'"
-    fi
-}
-
-assert_file_not_contains() {
-    local filepath="$1"
-    local needle="$2"
-    local label="${3:-assert_file_not_contains}"
-    if [ -f "$filepath" ] && grep -qF "$needle" "$filepath"; then
-        _test_fail "$label: file '$filepath' should not contain '$needle'"
-    fi
-}
-
-assert_mock_called() {
-    local cmd="$1"
-    local label="${2:-assert_mock_called}"
-    if ! grep -q "^${cmd} " "$MOCK_CALL_LOG" 2>/dev/null && ! grep -q "^${cmd}$" "$MOCK_CALL_LOG" 2>/dev/null; then
-        _test_fail "$label: mock '$cmd' was not called"
-    fi
-}
-
-assert_mock_not_called() {
-    local cmd="$1"
-    local label="${2:-assert_mock_not_called}"
-    if grep -q "^${cmd} " "$MOCK_CALL_LOG" 2>/dev/null || grep -q "^${cmd}$" "$MOCK_CALL_LOG" 2>/dev/null; then
-        _test_fail "$label: mock '$cmd' was called but should not have been"
-    fi
-}
-
-assert_file_content_equals() {
-    local filepath="$1"
-    local expected="$2"
-    local label="${3:-assert_file_content_equals}"
-    if [ ! -f "$filepath" ]; then
-        _test_fail "$label: file '$filepath' does not exist"
-    else
-        local actual
-        actual=$(cat "$filepath")
-        if [ "$expected" != "$actual" ]; then
-            _test_fail "$label: content mismatch (expected '$expected', got '${actual:0:80}')"
-        fi
-    fi
-}
-
-assert_gsettings_array_valid() {
-    local value="$1"
-    local label="${2:-assert_gsettings_array_valid}"
-    # @as [] è un array vuoto valido
-    if [ "$value" = "@as []" ]; then
-        return
-    fi
-    # Deve iniziare con [ e finire con ]
-    if [[ "$value" != "["*"]" ]]; then
-        _test_fail "$label: array non inizia con [ o non finisce con ]: '$value'"
-        return
-    fi
-    # No virgole doppie
-    if echo "$value" | grep -qE ',[[:space:]]*,'; then
-        _test_fail "$label: virgole doppie nell'array: '$value'"
-    fi
-    # No virgola iniziale dopo [
-    if echo "$value" | grep -qE '^\[[[:space:]]*,'; then
-        _test_fail "$label: virgola iniziale nell'array: '$value'"
-    fi
-    # No virgola finale prima di ]
-    if echo "$value" | grep -qE ',[[:space:]]*\]'; then
-        _test_fail "$label: virgola finale nell'array: '$value'"
-    fi
-}
-
-assert_mock_called_with() {
-    local cmd="$1"
-    local args_pattern="$2"
-    local label="${3:-assert_mock_called_with}"
-    if ! grep "^${cmd} " "$MOCK_CALL_LOG" 2>/dev/null | grep -q -- "$args_pattern"; then
-        _test_fail "$label: mock '$cmd' not called with args matching '$args_pattern'"
-        if [ -f "$MOCK_CALL_LOG" ]; then
-            local actual
-            actual=$(grep "^${cmd}" "$MOCK_CALL_LOG" 2>/dev/null | head -5 | sed 's/^/      /')
-            if [ -n "$actual" ]; then
-                _CURRENT_TEST_ERRORS="${_CURRENT_TEST_ERRORS}    Actual calls:"$'\n'"${actual}"$'\n'
+    if [ -f "$dist" ]; then
+        for module in "$PROJECT_DIR"/lib/*.sh; do
+            [ -f "$module" ] || continue
+            if [ -z "$newest" ] || [ "$module" -nt "$newest" ]; then
+                newest="$module"
             fi
+        done
+        if [ -n "$newest" ] && [ ! "$newest" -nt "$dist" ]; then
+            return 0
         fi
     fi
+
+    bash "$PROJECT_DIR/scripts/build.sh" >/dev/null
 }
 
-# --- Mock helpers ---
-
-# --- PATH ristretto ---
-
-# Crea un PATH contenente solo i comandi di sistema essenziali + eventuali extra.
-# I mock in $MOCK_BIN hanno sempre precedenza.
-# Uso: setup_restricted_path                  → solo comandi base
-#      setup_restricted_path pgrep diff python3 → base + extra
-# shellcheck disable=SC2120  # Argomenti opzionali: $@ aggiunge comandi extra
-setup_restricted_path() {
-    local sys_bin="$TEST_TMPDIR/sys_bin"
-    mkdir -p "$sys_bin"
-    local base_cmds=(bash grep sed echo cat rm mkdir chmod cp touch sleep tr head printf mktemp wc)
-    local cmd real_path
-    for cmd in "${base_cmds[@]}" "$@"; do
-        real_path=$(which "$cmd" 2>/dev/null || true)
-        if [ -n "$real_path" ] && [ -f "$real_path" ]; then
-            ln -sf "$real_path" "$sys_bin/$cmd"
-        fi
-    done
-    export PATH="$MOCK_BIN:$sys_bin"
+# Sorgia un modulo di lib/ per testarne le funzioni in isolamento (livello L1).
+# Uso: source_lib 10_env_detect.sh
+source_lib() {
+    local module="$1"
+    # shellcheck disable=SC1090 # Path dinamico per costruzione: è il senso dell'helper
+    source "$PROJECT_DIR/lib/$module"
 }
 
-# --- Mock helpers ---
-
-create_mock() {
-    local name="$1"
-    local body="${2:-}"
-    cat > "$MOCK_BIN/$name" <<MOCK_EOF
-#!/usr/bin/env bash
-echo "$name \$*" >> "\$MOCK_CALL_LOG"
-$body
-MOCK_EOF
-    chmod +x "$MOCK_BIN/$name"
+# Forza tipo di sessione e desktop per i test che dipendono dall'ambiente.
+# Uso: set_session_env wayland GNOME
+set_session_env() {
+    export PASTE_IMAGE_SESSION_TYPE="$1"
+    export PASTE_IMAGE_DESKTOP="${2:-}"
 }
 
-create_gsettings_mock() {
-    local initial_value="${1:-@as []}"
-
-    # Imposta valore iniziale per custom-keybindings
-    echo "$initial_value" > "$GSETTINGS_STATE/custom-keybindings"
-
-    cat > "$MOCK_BIN/gsettings" <<'GSETTINGS_EOF'
-#!/usr/bin/env bash
-
-echo "gsettings $*" >> "$MOCK_CALL_LOG"
-
-ACTION="$1"
-shift
-
-case "$ACTION" in
-    get)
-        SCHEMA="$1"
-        KEY="$2"
-        if [[ "$SCHEMA" == *"custom-keybinding:"* ]]; then
-            BINDING_PATH=$(echo "$SCHEMA" | sed 's/.*custom-keybinding://')
-            STATE_FILE="$GSETTINGS_STATE/binding_${KEY}_$(echo "$BINDING_PATH" | tr '/' '_')"
-        else
-            STATE_FILE="$GSETTINGS_STATE/$KEY"
-        fi
-        if [ -f "$STATE_FILE" ]; then
-            cat "$STATE_FILE"
-        else
-            echo "@as []"
-        fi
-        ;;
-    set)
-        SCHEMA="$1"
-        KEY="$2"
-        VALUE="$3"
-        if [[ "$SCHEMA" == *"custom-keybinding:"* ]]; then
-            BINDING_PATH=$(echo "$SCHEMA" | sed 's/.*custom-keybinding://')
-            STATE_FILE="$GSETTINGS_STATE/binding_${KEY}_$(echo "$BINDING_PATH" | tr '/' '_')"
-        else
-            STATE_FILE="$GSETTINGS_STATE/$KEY"
-        fi
-        echo "$VALUE" > "$STATE_FILE"
-        ;;
-    reset)
-        SCHEMA="$1"
-        KEY="$2"
-        if [[ "$SCHEMA" == *"custom-keybinding:"* ]]; then
-            BINDING_PATH=$(echo "$SCHEMA" | sed 's/.*custom-keybinding://')
-            STATE_FILE="$GSETTINGS_STATE/binding_${KEY}_$(echo "$BINDING_PATH" | tr '/' '_')"
-        else
-            STATE_FILE="$GSETTINGS_STATE/$KEY"
-        fi
-        rm -f "$STATE_FILE"
-        ;;
-esac
-GSETTINGS_EOF
-    chmod +x "$MOCK_BIN/gsettings"
-}
-
-create_date_mock() {
-    local fixed_timestamp="$1"
-
-    # Salva il path del date reale
-    local real_date
-    real_date=$(which date 2>/dev/null || echo "/usr/bin/date")
-
-    cat > "$MOCK_BIN/date" <<DATE_EOF
-#!/usr/bin/env bash
-echo "date \$*" >> "\$MOCK_CALL_LOG"
-if [ "\$1" = "+%Y%m%d_%H%M%S" ]; then
-    echo "$fixed_timestamp"
-else
-    "$real_date" "\$@"
-fi
-DATE_EOF
-    chmod +x "$MOCK_BIN/date"
+# Crea un PNG minimo valido (8 byte di firma + contenuto fittizio).
+# Serve ai test che devono distinguere un file immagine da un file vuoto.
+make_fake_image() {
+    local path="$1"
+    printf '\x89PNG\r\n\x1a\n' > "$path"
+    printf 'FAKE_IMAGE_CONTENT' >> "$path"
 }
 
 # --- Runner ---

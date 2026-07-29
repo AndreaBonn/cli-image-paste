@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# Le costanti di questo modulo sono consumate dai moduli successivi dopo la
+# concatenazione: analizzato in isolamento il file risulta a ShellCheck pieno
+# di variabili inutilizzate. La verifica SC2034 resta attiva su tutti gli
+# altri moduli, che vengono analizzati singolarmente.
+# shellcheck disable=SC2034
+#
+# paste-image — Incolla immagini dalla clipboard nel terminale attivo
+#
+# Utilizzo: viene invocato tramite shortcut globale del desktop.
+# Legge un'immagine dagli appunti, la salva come file temporaneo
+# e digita il path nel terminale attivo.
+#
+
+set -euo pipefail
+
+VERSION="1.0.0"
+
+# --- Configurazione ---
+# Valori di default. In seguito il modulo di configurazione li sovrascrive
+# con quanto letto da ~/.config/paste-image/config, dalle variabili
+# d'ambiente e dai flag della riga di comando, in quest'ordine.
+
+MAX_LOG_LINES=500          # Soglia di rotazione del file di log (in righe)
+NOTIFY_TIMEOUT=3000        # Durata notifiche desktop in millisecondi
+CLEANUP_DAYS=7             # Giorni dopo cui i file temporanei vengono eliminati
+TYPING_DELAY=0.1           # Pausa in secondi prima di xdotool type (stabilità focus)
+
+# I file creati contengono immagini potenzialmente sensibili (screenshot di
+# password manager, dati personali). Non affidarsi all'umask ereditato, che
+# con il valore comune 022 renderebbe log e directory leggibili da altri
+# utenti locali.
+umask 077

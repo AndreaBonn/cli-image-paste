@@ -10,6 +10,9 @@ docs/*
 !docs/ARCHITECTURE.md
 !docs/ARCHITECTURE.it.md
 
+# Artefatto generato da scripts/build.sh: si ricostruisce, non si versiona
+dist/
+
 # Log
 *.log
 firebase-debug.log
