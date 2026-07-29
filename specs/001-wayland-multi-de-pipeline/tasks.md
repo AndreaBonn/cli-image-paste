@@ -18,7 +18,9 @@ Legenda requisito: `F<n>` = feature del backlog originale, `S<n>` = mitigazione 
 | 0.8 | `tests/test_lib_config.sh`: precedenza, chiave ignota, valore non valido, migrazione v1, tabella di template ostili (newline, doppio `%s`, control char, oltre 200 char) | 90m | 0.4, 0.6 | S1 | basso |
 | 0.9 | `tests/test_no_side_effects.sh`: sorgiare ogni modulo in una tmpdir non crea file, non scrive, non esce | 30m | 0.3 | ADR-002 | basso |
 | 0.10 | Gate in `run_tests.sh`: fallisce oltre 300 righe per sorgente, ShellCheck esteso a `lib/*.sh` e all'artefatto, conteggio degli skip. Stessi target in `ci.yml` | 45m | 0.2 | DoD | basso |
-| 0.11 | `CLAUDE.md` di progetto (assente oggi): stack, convenzioni, regola "i moduli definiscono solo funzioni", come si builda e si testa. Aggiornare `docs/ARCHITECTURE.md` e `.it.md` | 75m | 0.7 | — | basso |
+| 0.11 | `CLAUDE.md` di progetto (assente oggi): stack, convenzioni, regola "i moduli definiscono solo funzioni", come si builda e si testa | 45m | 0.7 | — | basso |
+
+Nota di sequenza: l'aggiornamento di `docs/ARCHITECTURE.md` e `.it.md`, inizialmente parte di 0.11, è spostato al sub-task 5.3. La struttura dei moduli cambia ancora in modo sostanziale nelle Fasi 2, 3 e 4 (sorgenti alternative, pipeline di trasformazione, registrazione shortcut): documentarla adesso significherebbe riscrivere gli stessi diagrammi due volte. `CLAUDE.md` copre nel frattempo le convenzioni operative, che invece servono subito.
 
 Commit: dopo 0.3 (estrazione a comportamento invariato), dopo 0.6 (test disaccoppiati), dopo 0.11 (fondamenta complete).
 Gate: `security-reviewer` sul parser di config prima di chiudere la fase.

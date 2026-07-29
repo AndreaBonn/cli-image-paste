@@ -79,8 +79,10 @@ main() {
     store_init
     flush_config_warnings
 
+    # Solo la lettura degli appunti è indispensabile. Il backend di
+    # consegna viene scelto fra quelli disponibili: l'assenza di xdotool
+    # non è più un errore fatale, si ripiega sugli appunti.
     check_dependency xclip xclip
-    check_dependency xdotool xdotool
 
     local output_dir
     output_dir=$(resolve_output_dir)
@@ -131,7 +133,7 @@ main() {
         exit 1
     fi
 
-    deliver_path "$file_path" "$active_window"
+    deliver_path "$file_path" "$active_window" || exit 1
 
     notify "Immagine incollata: $(basename "$file_path")"
 }
@@ -141,16 +143,35 @@ main() {
 deliver_path() {
     local file_path="$1"
     local active_window="$2"
+    local backend text hint
 
-    if [ -n "$active_window" ]; then
-        xdotool windowfocus --sync "$active_window" 2>/dev/null || true
-        sleep "$TYPING_DELAY"
-        xdotool type --clearmodifiers --window "$active_window" "$file_path"
-    else
-        # Fallback: digita senza specificare la finestra
-        sleep "$TYPING_DELAY"
-        xdotool type --clearmodifiers "$file_path"
+    # Nulla raggiunge il terminale senza essere passato di qui: ciò che
+    # viene digitato è input di shell, e un carattere di controllo nel
+    # path equivale a premere Invio nel prompt in attesa.
+    if ! delivery_path_is_safe "$file_path"; then
+        notify "Path non sicuro, consegna annullata"
+        return 1
     fi
+
+    backend=$(delivery_select_backend "$(session_type)" "$(session_desktop)" "$TYPING_BACKEND")
+    text=$(delivery_render "$file_path" "$FORMAT_TEMPLATE")
+
+    if ! delivery_send "$backend" "$text" "$active_window"; then
+        # Il compositore non si può interrogare sulle sue capacità: lo si
+        # scopre fallendo. Registrato il negativo, si riprova con gli
+        # appunti, che nessun compositore può negare.
+        capability_mark_failed "$backend"
+        log "backend '$backend' fallito, ripiego sugli appunti"
+        backend="clipboard"
+        if ! delivery_send "$backend" "$text"; then
+            notify "Impossibile consegnare il path al terminale"
+            return 1
+        fi
+    fi
+
+    hint=$(delivery_hint "$backend")
+    [ -n "$hint" ] && notify "$hint"
+    return 0
 }
 
 main "$@"

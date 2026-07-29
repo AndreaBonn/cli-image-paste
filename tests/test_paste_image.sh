@@ -22,17 +22,32 @@ test_missing_xclip() {
     assert_contains "$output" "Errore" "messaggio è un errore"
 }
 
-# --- Test 2: Dipendenza xdotool mancante ---
-test_missing_xdotool() {
-    setup_restricted_path
-    create_mock "xclip" ""
+# --- Test 2: xdotool assente non e' piu' un errore fatale ---
+# Il backend di consegna viene scelto fra quelli disponibili: senza xdotool
+# si ripiega sugli appunti invece di rifiutare l'operazione. Solo la lettura
+# degli appunti resta indispensabile.
+test_missing_xdotool_falls_back() {
+    # PATH ristretto: senza questo il binario xdotool reale resta
+    # raggiungibile in /usr/bin e verrebbe invocato davvero, digitando
+    # nella sessione di chi esegue i test.
+    setup_restricted_path date find flock
+    create_mock "notify-send" ""
+    setup_xclip_mock "image/png" "PNG_IMAGE_BYTES"
+    create_date_mock "20260306_120010"
+    use_output_dir "$TEST_TMPDIR"
 
-    local output exit_code=0
-    output=$(bash "$PASTE_IMAGE_SCRIPT" 2>&1) || exit_code=$?
+    local exit_code=0
+    bash "$PASTE_IMAGE_SCRIPT" >/dev/null 2>&1 || exit_code=$?
 
-    assert_exit_code "1" "$exit_code" "exit code"
-    assert_contains "$output" "xdotool" "messaggio menziona xdotool"
-    assert_contains "$output" "Errore" "messaggio è un errore"
+    assert_exit_code "0" "$exit_code" "operazione completata senza xdotool"
+
+    local created_file
+    created_file=$(find_created_file "$TEST_TMPDIR" "20260306_120010" "png")
+    if [ -z "$created_file" ]; then
+        _test_fail "immagine non salvata senza xdotool"
+        return
+    fi
+    assert_mock_called_with "xclip" "-selection clipboard -i" "path consegnato via appunti"
 }
 
 # --- Test 3: Clipboard vuota ---
@@ -214,7 +229,7 @@ echo "=== test_paste_image.sh ==="
 run_test "--version mostra versione" test_version_flag
 run_test "-v mostra versione" test_version_flag_short
 run_test "Dipendenza xclip mancante" test_missing_xclip
-run_test "Dipendenza xdotool mancante" test_missing_xdotool
+run_test "xdotool assente: ripiego sugli appunti" test_missing_xdotool_falls_back
 run_test "Clipboard vuota" test_clipboard_empty
 run_test "Clipboard senza immagine" test_clipboard_no_image
 run_test "PNG nella clipboard" test_png_clipboard
