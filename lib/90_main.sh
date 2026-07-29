@@ -139,7 +139,12 @@ deliver_path() {
     fi
 
     backend=$(delivery_select_backend "$(session_type)" "$(session_desktop)" "$TYPING_BACKEND")
-    text=$(delivery_render "$file_path" "$FORMAT_TEMPLATE")
+
+    # Il template configurato vince sul rilevamento: se l'utente lo ha
+    # scritto, indovinare diversamente sarebbe ignorare una sua istruzione.
+    local template
+    template=$(format_choose_template "$FORMAT_TEMPLATE" "$active_window")
+    text=$(delivery_render "$file_path" "$template")
 
     if ! delivery_send "$backend" "$text" "$active_window"; then
         # Il compositore non si può interrogare sulle sue capacità: lo si

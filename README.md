@@ -255,6 +255,13 @@ sudo pacman -S xclip xdotool libnotify
 4. The image is saved and its path is typed into the terminal
 5. **Press Enter** to send it to the coding assistant
 
+The output format adapts to the assistant running in the terminal: a bare
+path for Claude Code, `/add <path>` for Aider, `@<path>` for Gemini CLI.
+Detection walks down the process tree of the focused window, so it only works
+on X11; elsewhere, and for any program not in the list, the bare path is used
+because it is always pasteable. Setting `FORMAT_TEMPLATE` in the config
+overrides detection.
+
 ### Capturing a screenshot directly
 
 ```bash

@@ -256,6 +256,14 @@ sudo pacman -S xclip xdotool libnotify
 4. L'immagine viene salvata e il suo percorso digitato nel terminale
 5. **Premi Invio** per inviarla all'assistente di coding
 
+Il formato dell'output si adatta all'assistente in esecuzione nel terminale:
+percorso nudo per Claude Code, `/add <percorso>` per Aider, `@<percorso>` per
+Gemini CLI. Il rilevamento scende nell'albero dei processi della finestra
+attiva, quindi funziona solo su X11; altrove, e per qualunque programma fuori
+dall'elenco, viene usato il percorso nudo, che è sempre incollabile.
+Impostare `FORMAT_TEMPLATE` nella configurazione ha la precedenza sul
+rilevamento.
+
 ### Catturare direttamente uno screenshot
 
 ```bash
