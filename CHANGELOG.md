@@ -38,6 +38,12 @@
 - Output format adapts to the assistant in the terminal: bare path,
   `/add <path>` for Aider, `@<path>` for Gemini CLI.
 - `--doctor`, `--print-shortcut`, `--reset-capabilities`, `--help`.
+- Distribution packages: a `.deb` attached to this release, a `PKGBUILD` for
+  Arch and a Nix flake. They install the executable to a system prefix through
+  a `Makefile` that honours `DESTDIR` and `PREFIX`, and leave the shortcut to
+  the user, since a package cannot know which desktop will be running.
+  `install.sh` remains the path for a per-user installation with the shortcut
+  configured.
 
 ### 🔒 Security
 
