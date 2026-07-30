@@ -111,6 +111,28 @@ test_shortcut_conflict_detected() {
     assert_contains "$output" "<Control><Shift>v" "shortcut conflittuale mostrato"
 }
 
+# Rifiutare il conflitto porta a un secondo giro di validazione, che è un
+# punto di ingresso diverso dal primo: deve accettare le stesse scorciatoie,
+# altrimenti l'utente resta bloccato in un ciclo che rifiuta tutto.
+test_shortcut_conflict_declined_accepts_new_one() {
+    setup_install_env
+    local other_path="/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/other/"
+    create_gsettings_mock "['${other_path}']"
+
+    local binding_state name_state
+    binding_state="$GSETTINGS_STATE/binding_binding_$(echo "$other_path" | tr '/' '_')"
+    name_state="$GSETTINGS_STATE/binding_name_$(echo "$other_path" | tr '/' '_')"
+    echo "'<Control><Shift>v'" > "$binding_state"
+    echo "'Other Tool'" > "$name_state"
+
+    # Invio (accetta il default, che confligge), "n" (non usarlo comunque),
+    # poi una scorciatoia valida e diversa.
+    run_install "\nn\n<Control><Alt>x\n" >/dev/null 2>&1 || true
+
+    assert_mock_called_with "gsettings" "set.*binding.*<Control><Alt>x" \
+        "la scorciatoia sostitutiva viene accettata e registrata"
+}
+
 # --- Dispatcher multi-desktop ---
 
 # Su un window manager non esiste un registro da scrivere: l'installer deve
@@ -168,6 +190,7 @@ run_test "gsettings: N binding → appende" test_gsettings_multiple_existing
 run_test "Reinstallazione idempotente" test_reinstall_idempotent
 run_test "Shortcut custom" test_custom_shortcut
 run_test "Conflitto shortcut rilevato" test_shortcut_conflict_detected
+run_test "Conflitto rifiutato: accetta la sostitutiva" test_shortcut_conflict_declined_accepts_new_one
 run_test "Window manager: stampa la riga di config" test_window_manager_prints_config_line
 run_test "Hyprland: sintassi propria" test_hyprland_prints_its_own_syntax
 run_test "Desktop ignoto: installa comunque" test_unknown_desktop_still_installs

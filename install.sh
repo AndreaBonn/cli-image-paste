@@ -185,7 +185,7 @@ if [ "$CURRENT_BINDINGS" != "@as []" ]; then
                         echo "Nessuno shortcut configurato. Puoi farlo manualmente dopo."
                         break
                     fi
-                    if validate_shortcut "$SHORTCUT"; then
+                    if shortcut_validate_gtk "$SHORTCUT"; then
                         break
                     fi
                     echo "ERRORE: formato shortcut non valido. Usa il formato GTK, es: <Control><Alt>v"
