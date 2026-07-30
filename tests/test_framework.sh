@@ -20,6 +20,61 @@ _CURRENT_TEST_ERRORS=""
 _ORIG_HOME="$HOME"
 _ORIG_PATH="$PATH"
 
+# --- Isolamento dall'ambiente ospite ---
+#
+# Redirigere HOME non basta: le directory XDG hanno una variabile propria che
+# vince su HOME, e il tipo di sessione grafica si legge dall'ambiente. Un test
+# che le eredita misura il desktop di chi lo esegue, non il codice: passa sulla
+# macchina di sviluppo sotto X11 e fallisce su un runner headless, e un file
+# scritto in $XDG_CONFIG_HOME sopravvive alla suite e contamina le successive.
+# Ogni suite dichiara la sessione che vuole con set_session_env.
+_HOST_ENV_VARS=(XDG_CONFIG_HOME XDG_STATE_HOME XDG_DATA_HOME XDG_CACHE_HOME
+                XDG_SESSION_TYPE XDG_CURRENT_DESKTOP XDG_SESSION_DESKTOP
+                DISPLAY WAYLAND_DISPLAY)
+
+declare -A _HOST_ENV_SAVED=()
+
+_save_host_env() {
+    local var
+    for var in "${_HOST_ENV_VARS[@]}"; do
+        # ${!var+x} distingue "non impostata" da "impostata a vuoto": il
+        # ripristino deve rimettere l'assenza, non una stringa vuota.
+        if [ -n "${!var+x}" ]; then
+            _HOST_ENV_SAVED["$var"]="${!var}"
+        fi
+    done
+    # L'esito del ciclo non è l'esito della funzione: l'ultima variabile
+    # assente lascerebbe uno stato di uscita 1, che sotto set -e ucciderebbe
+    # la suite proprio mentre la sorgia.
+    return 0
+}
+
+_isolate_host_env() {
+    local var
+    for var in "${_HOST_ENV_VARS[@]}"; do
+        unset "$var"
+    done
+    # Puntate dentro il fake home invece che lasciate assenti: se il codice
+    # sotto test le legge, deve comunque scrivere in area usa e getta.
+    export XDG_CONFIG_HOME="$FAKE_HOME/.config"
+    export XDG_STATE_HOME="$FAKE_HOME/.local/state"
+    export XDG_DATA_HOME="$FAKE_HOME/.local/share"
+    export XDG_CACHE_HOME="$FAKE_HOME/.cache"
+}
+
+_restore_host_env() {
+    local var
+    for var in "${_HOST_ENV_VARS[@]}"; do
+        if [ -n "${_HOST_ENV_SAVED[$var]+x}" ]; then
+            export "$var=${_HOST_ENV_SAVED[$var]}"
+        else
+            unset "$var"
+        fi
+    done
+}
+
+_save_host_env
+
 # Directory del progetto (due livelli su da tests/)
 # shellcheck disable=SC2034 # Usato dai test suite che importano questo framework
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -41,6 +96,7 @@ setup_test_env() {
 
     export HOME="$FAKE_HOME"
     export PATH="$MOCK_BIN:$_ORIG_PATH"
+    _isolate_host_env
     export MOCK_CALL_LOG
     export GSETTINGS_STATE
     export MOCK_BIN
@@ -51,6 +107,7 @@ setup_test_env() {
 teardown_test_env() {
     export HOME="$_ORIG_HOME"
     export PATH="$_ORIG_PATH"
+    _restore_host_env
     unset MOCK_CALL_LOG GSETTINGS_STATE MOCK_BIN FAKE_HOME
     unset PASTE_IMAGE_OUTPUT_DIR
     unset PASTE_IMAGE_SESSION_TYPE PASTE_IMAGE_DESKTOP

@@ -72,6 +72,8 @@ Livelli di verifica, perché la macchina di sviluppo non può provare tutti gli 
 - **L2** — binari finti su `PATH` più ambiente forzato (`PASTE_IMAGE_SESSION_TYPE`, `PASTE_IMAGE_DESKTOP`). Gira in CI.
 - **L3** — manuale su hardware reale. Ciò che resta non verificato va **dichiarato**, non nascosto.
 
+Un test non eredita nulla dalla macchina che lo esegue: `setup_test_env` dirotta `HOME`, le directory XDG e le variabili di sessione dentro il fake home, quindi la sessione va **dichiarata** con `set_session_env` in ogni suite che esercita un percorso specifico di desktop. Un test che legge l'ambiente reale passa sotto X11 e fallisce su un runner headless, e ciò che scrive fuori dal fake home cambia l'esito delle suite successive. L'invariante è verificato da `tests/test_framework_isolation.sh`.
+
 Regole: ogni funzione ha test sul comportamento atteso, non sull'assenza di crash. Un test che non ha mai visto il rosso non prova nulla: dopo averlo scritto, rompi intenzionalmente il codice e verifica che fallisca. Mai valori speciali nel codice di produzione per far passare un test.
 
 ## Convenzioni di scrittura

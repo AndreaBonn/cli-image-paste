@@ -6,7 +6,13 @@
 INSTALL_SCRIPT="$PROJECT_DIR/install.sh"
 
 # Helper: setup minimo per install
+#
+# La sessione va dichiarata: il registro delle scorciatoie è quello di GNOME e
+# l'installer lo scrive solo se riconosce quel desktop. Ereditarlo dall'ambiente
+# renderebbe l'esito dipendente dalla macchina che esegue i test. I test di
+# altri desktop sovrascrivono l'override dopo questa chiamata.
 setup_install_env() {
+    set_session_env x11 gnome
     setup_restricted_path pgrep diff python3
     create_mock "apt" ""
     create_mock "xclip" ""

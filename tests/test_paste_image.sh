@@ -11,6 +11,7 @@ source "$SCRIPT_DIR/framework/paste_image_helpers.sh"
 
 # --- Test 1: Dipendenza xclip mancante ---
 test_missing_xclip() {
+    set_session_env x11 gnome
     setup_restricted_path
     create_mock "xdotool" ""
 
@@ -27,6 +28,10 @@ test_missing_xclip() {
 # si ripiega sugli appunti invece di rifiutare l'operazione. Solo la lettura
 # degli appunti resta indispensabile.
 test_missing_xdotool_falls_back() {
+    # Il ripiego che si vuole osservare esiste solo dove xdotool è il primo
+    # anello della catena: su una sessione senza X11 la consegna partirebbe
+    # già dagli appunti e il test passerebbe senza provare nulla.
+    set_session_env x11 gnome
     # PATH ristretto: senza questo il binario xdotool reale resta
     # raggiungibile in /usr/bin e verrebbe invocato davvero, digitando
     # nella sessione di chi esegue i test.

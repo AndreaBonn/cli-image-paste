@@ -126,6 +126,7 @@ assert_mock_not_called_with_pattern() {
 # --- Formato non gestito senza convertitore: messaggio esplicito ---
 
 test_unsupported_format_names_the_tool() {
+    set_session_env x11 gnome
     setup_restricted_path date find flock
     create_mock "notify-send" ""
     use_output_dir "$TEST_TMPDIR"

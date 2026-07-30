@@ -78,6 +78,7 @@ test_empty_image() {
 # --- Test 13: notify-send assente ---
 test_no_notify_send() {
     setup_restricted_path
+    set_session_env x11 gnome
     # shellcheck disable=SC2016 # Single quotes intenzionali: corpo dello script mock
     create_mock "xdotool" 'case "$1" in getactivewindow) echo "12345";; esac'
     setup_xclip_mock "image/png" "PNG_IMAGE_BYTES"
@@ -101,6 +102,7 @@ test_no_notify_send() {
 # --- Test 14: Fallback xdotool senza finestra attiva ---
 test_no_active_window() {
     # xdotool getactivewindow fallisce → lo script usa il fallback (type senza --window)
+    set_session_env x11 gnome
     # shellcheck disable=SC2016 # Single quotes intenzionali: corpo dello script mock
     create_mock "xdotool" 'if [ "$1" = "getactivewindow" ]; then exit 1; fi'
     create_mock "notify-send" ""

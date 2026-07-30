@@ -18,7 +18,13 @@ use_output_dir() {
 }
 
 # Helper: setup mock base (xclip, xdotool, notify-send)
+#
+# Dichiara anche la sessione: questi mock descrivono un desktop X11, che è
+# l'ambiente in cui la consegna passa da xdotool. Senza la dichiarazione il
+# percorso esercitato sarebbe quello della macchina ospite, e su un runner
+# headless la catena diventa "clipboard": i mock non verrebbero mai chiamati.
 setup_base_mocks() {
+    set_session_env x11 gnome
     # shellcheck disable=SC2016 # Single quotes intenzionali: corpo dello script mock
     create_mock "xdotool" 'case "$1" in getactivewindow) echo "12345";; esac'
     create_mock "notify-send" ""
