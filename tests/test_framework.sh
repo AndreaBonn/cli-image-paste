@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# test_framework.sh — Mini-framework di test per paste-images-cli
+# test_framework.sh — Mini-framework di test per cli-image-paste
 #
 # Fornisce isolamento per-test, assertion TAP-like e mock helpers.
 # Viene caricato (source) da ogni test suite.

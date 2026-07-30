@@ -1,4 +1,4 @@
-# ShellCheck configuration for paste-images-cli
+# ShellCheck configuration for cli-image-paste
 shell=bash
 external-sources=true
 source-path=SCRIPTDIR

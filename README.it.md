@@ -204,7 +204,7 @@ all'aggiunta del tuo account a un gruppo di sistema.
 ## Installazione
 
 ```bash
-git clone https://github.com/user/cli-image-paste.git
+git clone https://github.com/AndreaBonn/cli-image-paste.git
 cd cli-image-paste
 bash install.sh
 ```
