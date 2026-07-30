@@ -57,6 +57,7 @@ annidato headless; wl-clipboard 2.2.1; ImageMagick 6.9.12.
 | Cattura area con `grim` via `--screenshot` | L3 | Area 200x150 catturata, PNG valido |
 | Resize da 4000x3000 a 1568x1176 | L3 | Dimensioni corrette, un solo file su disco, nessun intermedio residuo |
 | `make install` con `PREFIX` e `DESTDIR` | L2 | Albero corretto, `$HOME` non toccata |
+| `make deb` costruisce il pacchetto | L3 | Costruito con dpkg-deb 1.22 e ispezionato: directory radice 0755, eseguibile, documentazione ed esempio di configurazione presenti, `Version` presa dalla costante del sorgente, nessuno staging residuo in `/tmp` |
 
 ## Non verificato
 
@@ -70,6 +71,9 @@ annidato headless; wl-clipboard 2.2.1; ImageMagick 6.9.12.
 | Cattura con `spectacle`, `flameshot`, `maim`, `scrot` | Non installati; solo la selezione dello strumento è coperta da L1 | `paste-image --screenshot` con ciascuno presente |
 | Conversione **AVIF** | ImageMagick 6 sulla macchina di sviluppo non ha il delegate AVIF | Stessa prova del WebP, su un sistema con ImageMagick 7 |
 | Fedora, Arch, openSUSE | Sono stati esercitati solo i nomi dei pacchetti Debian e Ubuntu | Eseguire l'installer e controllare i nomi dei pacchetti che propone |
+| **Installazione** del `.deb` | Il pacchetto è stato costruito e ispezionato, mai installato: significherebbe scrivere in `/usr` sulla macchina di sviluppo | `sudo dpkg -i dist/cli-image-paste_*_all.deb`, poi `paste-image --doctor` |
+| **PKGBUILD** | `makepkg` non è disponibile qui, quindi la suite controlla solo il campo della versione | `makepkg -si` in un chroot pulito, meglio se con `namcap` sul risultato |
+| **flake.nix** | `nix` non è installato sulla macchina di sviluppo | `nix build .#default` e poi `./result/bin/paste-image --doctor`, che esercita anche il wrapper del PATH |
 
 ## Segnalazioni
 

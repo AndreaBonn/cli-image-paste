@@ -1,0 +1,35 @@
+name: Release assets
+
+# L'artefatto è generato, quindi il repository non ne contiene uno scaricabile:
+# senza questi allegati l'unico modo di ottenere il tool sarebbe clonare e
+# buildare, che è esattamente la regressione dichiarata nel CHANGELOG della 2.0.
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  assets:
+    name: Build and attach
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # I test girano prima della pubblicazione degli allegati: un pacchetto
+      # costruito da un albero rosso è peggio di nessun pacchetto.
+      - name: Run test suite
+        run: bash tests/run_tests.sh
+
+      - name: Build the Debian package
+        run: make deb
+
+      - name: Attach assets to the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "${{ github.event.release.tag_name }}" \
+            dist/paste-image \
+            dist/cli-image-paste_*_all.deb \
+            --clobber

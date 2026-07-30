@@ -18,7 +18,7 @@ jobs:
 
       - name: Run ShellCheck
         run: |
-          shellcheck dist/paste-image lib/*.sh scripts/*.sh \
+          shellcheck dist/paste-image lib/*.sh scripts/*.sh packaging/*/*.sh \
             install.sh uninstall.sh tests/*.sh tests/framework/*.sh
 
   test:

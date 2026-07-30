@@ -15,7 +15,7 @@ BIN = paste-image
 DIST = dist/$(BIN)
 SOURCES = $(wildcard lib/*.sh)
 
-.PHONY: all build test lint install uninstall clean help
+.PHONY: all build test lint install uninstall deb clean help
 
 all: build
 
@@ -30,8 +30,8 @@ test:
 	bash tests/run_tests.sh
 
 lint:
-	shellcheck $(DIST) lib/*.sh scripts/*.sh install.sh uninstall.sh \
-		tests/*.sh tests/framework/*.sh
+	shellcheck $(DIST) lib/*.sh scripts/*.sh packaging/*/*.sh \
+		install.sh uninstall.sh tests/*.sh tests/framework/*.sh
 
 install: build
 	install -d $(BINDIR)
@@ -47,6 +47,11 @@ uninstall:
 	rm -rf $(EXAMPLEDIR)
 	rm -rf $(DOCDIR)
 
+# Il pacchetto finisce in dist/ accanto all'artefatto: sono entrambi output di
+# build, e tenerli insieme evita una seconda directory da ignorare in git.
+deb:
+	bash packaging/debian/build-deb.sh
+
 clean:
 	rm -rf dist
 
@@ -57,6 +62,7 @@ help:
 	@echo "  lint       ShellCheck su tutti i percorsi"
 	@echo "  install    Installa in \$$PREFIX (default /usr/local), rispetta \$$DESTDIR"
 	@echo "  uninstall  Rimuove quanto installato da 'make install'"
+	@echo "  deb        Costruisce dist/cli-image-paste_<versione>_all.deb"
 	@echo "  clean      Rimuove l'artefatto generato"
 	@echo ""
 	@echo "Per un'installazione utente con scorciatoia: bash install.sh"

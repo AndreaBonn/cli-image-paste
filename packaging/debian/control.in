@@ -1,0 +1,26 @@
+Package: cli-image-paste
+Version: @VERSION@
+Section: utils
+Priority: optional
+Architecture: all
+Maintainer: Andrea Bonacci <andreabonacci95@protonmail.com>
+Homepage: https://github.com/AndreaBonn/cli-image-paste
+Depends: bash (>= 4.4), xclip | wl-clipboard
+Recommends: imagemagick, libnotify-bin
+Suggests: xdotool, wtype, librsvg2-bin, grim, slurp, ydotool
+Description: paste clipboard images into the active terminal as a file path
+ CLI coding assistants accept image files as input but have no way to read
+ an image from the system clipboard. This tool bridges the gap: copy an
+ image, press a shortcut, and the path to a saved file is typed into the
+ terminal that had focus.
+ .
+ Reading the clipboard and delivering the path are separate: xclip on X11,
+ wl-clipboard on Wayland, and delivery through xdotool, wtype or the
+ clipboard itself depending on what the compositor allows. On GNOME Wayland,
+ where no tool can synthesise keystrokes, the path is placed in the clipboard
+ and a notification says so.
+ .
+ The package installs the executable only. Registering a keyboard shortcut is
+ left to the user, since the package cannot know which desktop is running at
+ install time: run paste-image --print-shortcut for the config line, or use
+ the installer from the source tree.

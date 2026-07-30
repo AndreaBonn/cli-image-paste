@@ -56,6 +56,7 @@ headless; wl-clipboard 2.2.1; ImageMagick 6.9.12.
 | `grim` area capture via `--screenshot` | L3 | 200x150 area captured, valid PNG |
 | Resize 4000x3000 to 1568x1176 | L3 | Correct dimensions, single file on disk, no intermediates left |
 | `make install` with `PREFIX` and `DESTDIR` | L2 | Correct tree, `$HOME` untouched |
+| `make deb` builds the package | L3 | Built with dpkg-deb 1.22 and inspected: root directory 0755, executable, docs and config example present, `Version` taken from the source constant, no staging left in `/tmp` |
 
 ## Not verified
 
@@ -69,6 +70,9 @@ headless; wl-clipboard 2.2.1; ImageMagick 6.9.12.
 | `spectacle`, `flameshot`, `maim`, `scrot` capture | Not installed; only tool selection is covered by L1 | `paste-image --screenshot` with each present |
 | **AVIF conversion** | ImageMagick 6 on the development machine has no AVIF delegate | Same test as WebP, on a system with ImageMagick 7 |
 | Fedora, Arch, openSUSE | Only Debian and Ubuntu package names were exercised | Run the installer and check the package names it proposes |
+| **Installing** the `.deb` | The package was built and inspected, never installed: that would mean writing to `/usr` on the development machine | `sudo dpkg -i dist/cli-image-paste_*_all.deb`, then run `paste-image --doctor` |
+| **PKGBUILD** | `makepkg` is not available here, so only the version field is checked by the suite | `makepkg -si` in a clean chroot, ideally with `namcap` on the result |
+| **flake.nix** | `nix` is not installed on the development machine | `nix build .#default` and run `./result/bin/paste-image --doctor`, which also exercises the PATH wrapper |
 
 ## Reporting
 

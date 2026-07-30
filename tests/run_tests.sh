@@ -39,6 +39,7 @@ echo "--- Gate dimensionale (max $MAX_FILE_LINES righe) ---"
 echo ""
 
 SIZE_TARGETS=("$PROJECT_DIR"/lib/*.sh "$PROJECT_DIR"/scripts/*.sh
+              "$PROJECT_DIR"/packaging/*/*.sh
               "$PROJECT_DIR/install.sh" "$PROJECT_DIR/uninstall.sh"
               "$SCRIPT_DIR"/*.sh "$SCRIPT_DIR"/framework/*.sh)
 
@@ -68,8 +69,9 @@ if command -v shellcheck &>/dev/null; then
         "$PROJECT_DIR/install.sh"
         "$PROJECT_DIR/uninstall.sh"
     )
-    # Moduli sorgente e script di build
-    for f in "$PROJECT_DIR"/lib/*.sh "$PROJECT_DIR"/scripts/*.sh; do
+    # Moduli sorgente, script di build e script di packaging
+    for f in "$PROJECT_DIR"/lib/*.sh "$PROJECT_DIR"/scripts/*.sh \
+             "$PROJECT_DIR"/packaging/*/*.sh; do
         [ -f "$f" ] && SHELLCHECK_TARGETS+=("$f")
     done
     # Aggiungi anche i file di test e il runner stesso

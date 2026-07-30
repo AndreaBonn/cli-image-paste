@@ -1,0 +1,54 @@
+# Maintainer: Andrea Bonacci <andreabonacci95@protonmail.com>
+#
+# pkgver va tenuto allineato a VERSION in lib/00_header.sh. La verifica non è
+# a occhio: tests/test_packaging.sh fallisce se le due divergono.
+#
+# sha256sums resta SKIP finché il tag non esiste: al momento della release va
+# sostituito con l'hash reale dell'archivio, altrimenti l'AUR non offre alcuna
+# garanzia su cosa viene scaricato.
+
+pkgname=cli-image-paste
+pkgver=2.0.0
+pkgrel=1
+pkgdesc="Paste clipboard images into the active terminal as a file path"
+arch=('any')
+url="https://github.com/AndreaBonn/cli-image-paste"
+license=('MIT')
+
+# Arch non esprime alternative nelle dipendenze, e leggere gli appunti
+# richiede uno fra wl-clipboard e xclip a seconda della sessione. Dichiararne
+# uno solo come obbligatorio installerebbe il pacchetto sbagliato alla metà
+# degli utenti, quindi entrambi stanno fra le opzionali con il loro perché.
+depends=('bash')
+optdepends=(
+    'wl-clipboard: read the clipboard on Wayland (required there)'
+    'xclip: read the clipboard on X11 (required there)'
+    'wtype: type the path on wlroots compositors'
+    'xdotool: type the path on X11'
+    'imagemagick: convert WebP, GIF, TIFF, BMP and resize large images'
+    'librsvg: rasterise SVG from the clipboard'
+    'libnotify: desktop notifications'
+    'grim: area capture with --screenshot on Wayland'
+    'slurp: area selection for grim'
+    'satty: annotate the image with --annotate'
+    'swappy: annotate the image with --annotate'
+)
+checkdepends=('shellcheck')
+
+source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
+sha256sums=('SKIP')
+
+build() {
+    cd "$pkgname-$pkgver"
+    make build
+}
+
+check() {
+    cd "$pkgname-$pkgver"
+    make test
+}
+
+package() {
+    cd "$pkgname-$pkgver"
+    make install PREFIX=/usr DESTDIR="$pkgdir"
+}
